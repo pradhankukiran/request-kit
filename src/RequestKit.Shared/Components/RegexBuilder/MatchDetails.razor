@@ -17,7 +17,7 @@
         {
             var match = State.Matches[idx];
             var matchNum = idx + 1;
-            <div class="rk-match-item" @key="idx">
+            <div class="rk-match-item" @key="@($"{idx}-{match.Index}-{match.Value}")">
                 <div class="rk-match-header">
                     <span class="rk-match-badge">Match @matchNum</span>
                     <span class="rk-match-pos">Index @match.Index, Length @match.Length</span>

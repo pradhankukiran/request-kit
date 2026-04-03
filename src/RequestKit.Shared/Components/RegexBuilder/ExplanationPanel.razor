@@ -18,7 +18,7 @@
                 @for (int i = 0; i < State.Explanation.Count; i++)
                 {
                     var part = State.Explanation[i];
-                    <tr @key="i">
+                    <tr @key="@($"{i}-{part.Token}")">
                         <td><code class="rk-explanation-token">@part.Token</code></td>
                         <td class="rk-explanation-desc">@part.Description</td>
                     </tr>

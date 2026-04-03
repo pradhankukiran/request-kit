@@ -9,7 +9,7 @@
         @for (int i = 0; i < Lines.Count; i++)
         {
             var line = Lines[i];
-            <div class="rk-diff-sbs-row" @key="i">
+            <div class="rk-diff-sbs-row" @key="@($"{i}-{line.LeftLineNumber}-{line.RightLineNumber}")">
                 @* Left column *@
                 <div class="rk-diff-sbs-cell @LeftCellClass(line)">
                     <span class="rk-diff-line-num">@(line.LeftLineNumber?.ToString() ?? "")</span>
