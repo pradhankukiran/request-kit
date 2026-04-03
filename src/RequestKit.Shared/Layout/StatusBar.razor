@@ -1,0 +1,22 @@
+@inject ApiClientState ApiState
+@implements IDisposable
+
+<footer class="rk-statusbar">
+    <div class="rk-statusbar-left">
+        <span class="rk-status-dot"></span>
+        <span>Ready</span>
+    </div>
+    <div class="rk-statusbar-center">
+        <span>@ApiState.Requests.Count requests</span>
+        <span class="rk-sep">|</span>
+        <span>@ApiState.History.Count history</span>
+    </div>
+    <div class="rk-statusbar-right">
+        <span>@(ApiState.ActiveEnvironment?.Name ?? "No Environment")</span>
+    </div>
+</footer>
+
+@code {
+    protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
+    public void Dispose() => ApiState.OnChange -= StateHasChanged;
+}

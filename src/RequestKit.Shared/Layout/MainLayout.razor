@@ -1,0 +1,39 @@
+@inherits Microsoft.AspNetCore.Components.LayoutComponentBase
+@inject AppState App
+@inject KeyboardInterop Keyboard
+@implements IDisposable
+
+<div class="rk-app">
+    <TopBar />
+    <div class="rk-body">
+        @Body
+    </div>
+    <StatusBar />
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Keyboard.InitializeAsync();
+            Keyboard.OnShortcut += HandleShortcut;
+        }
+    }
+
+    private void HandleShortcut(string shortcut)
+    {
+        try
+        {
+            switch (shortcut)
+            {
+                case "Ctrl+1": App.SetMode(ToolMode.ApiClient); break;
+                case "Ctrl+2": App.SetMode(ToolMode.RegexBuilder); break;
+                case "Ctrl+3": App.SetMode(ToolMode.DiffViewer); break;
+            }
+        }
+        catch { }
+    }
+
+    public void Dispose() => Keyboard.OnShortcut -= HandleShortcut;
+}

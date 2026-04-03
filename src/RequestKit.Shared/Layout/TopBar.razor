@@ -1,0 +1,25 @@
+@inject AppState App
+@inject NavigationManager Nav
+@implements IDisposable
+
+<header class="rk-topbar">
+    <div class="rk-topbar-left">
+        <span class="rk-logo">RequestKit</span>
+    </div>
+    <div class="rk-topbar-center">
+        <button class="rk-mode-tab @(App.ActiveMode == ToolMode.ApiClient ? "active" : "")"
+                @onclick="() => App.SetMode(ToolMode.ApiClient)">API Client</button>
+        <button class="rk-mode-tab @(App.ActiveMode == ToolMode.RegexBuilder ? "active" : "")"
+                @onclick="() => App.SetMode(ToolMode.RegexBuilder)">Regex</button>
+        <button class="rk-mode-tab @(App.ActiveMode == ToolMode.DiffViewer ? "active" : "")"
+                @onclick="() => App.SetMode(ToolMode.DiffViewer)">Diff</button>
+    </div>
+    <div class="rk-topbar-right">
+        <button class="rk-btn rk-btn-sm" @onclick='() => Nav.NavigateTo("/")'>Home</button>
+    </div>
+</header>
+
+@code {
+    protected override void OnInitialized() => App.OnModeChanged += StateHasChanged;
+    public void Dispose() => App.OnModeChanged -= StateHasChanged;
+}
