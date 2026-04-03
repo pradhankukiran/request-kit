@@ -1,0 +1,38 @@
+<div class="rk-body-editor">
+    <div class="rk-tab-bar rk-tab-bar-sm">
+        <button class="rk-tab @(Body.Type == BodyType.None ? "active" : "")"
+                @onclick="() => SetType(BodyType.None)">None</button>
+        <button class="rk-tab @(Body.Type == BodyType.RawJson ? "active" : "")"
+                @onclick="() => SetType(BodyType.RawJson)">JSON</button>
+        <button class="rk-tab @(Body.Type == BodyType.RawXml ? "active" : "")"
+                @onclick="() => SetType(BodyType.RawXml)">XML</button>
+        <button class="rk-tab @(Body.Type == BodyType.RawText ? "active" : "")"
+                @onclick="() => SetType(BodyType.RawText)">Text</button>
+        <button class="rk-tab @(Body.Type == BodyType.FormData ? "active" : "")"
+                @onclick="() => SetType(BodyType.FormData)">Form</button>
+    </div>
+
+    @if (Body.Type == BodyType.None)
+    {
+        <div class="rk-empty-state">This request has no body.</div>
+    }
+    else if (Body.Type == BodyType.FormData)
+    {
+        <KeyValueEditor Entries="@Body.FormData" OnChanged="UpdateFormData" Placeholder="field" />
+    }
+    else
+    {
+        <textarea class="rk-textarea rk-body-textarea" value="@Body.RawContent"
+                  @oninput="e => UpdateRawContent(e.Value?.ToString() ?? string.Empty)"
+                  placeholder="Enter request body..."></textarea>
+    }
+</div>
+
+@code {
+    [Parameter] public RequestBody Body { get; set; } = new();
+    [Parameter] public EventCallback<RequestBody> OnChanged { get; set; }
+
+    private void SetType(BodyType type) => OnChanged.InvokeAsync(Body with { Type = type });
+    private void UpdateRawContent(string content) => OnChanged.InvokeAsync(Body with { RawContent = content });
+    private void UpdateFormData(List<KeyValueEntry> data) => OnChanged.InvokeAsync(Body with { FormData = data });
+}
