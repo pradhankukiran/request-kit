@@ -83,7 +83,7 @@ body {
 .rk-sep { color: var(--rk-border); }
 
 /* --- Workbench Layout --- */
-.rk-workbench { display: flex; flex-direction: row; height: 100%; }
+.rk-workbench { display: flex; flex-direction: row; height: 100%; min-height: 0; }
 .rk-sidebar {
     width: 280px; min-width: 280px; border-right: 1px solid var(--rk-border);
     background: var(--rk-surface); display: flex; flex-direction: column; overflow: hidden;
@@ -329,6 +329,7 @@ body {
 .rk-api-client {
     display: flex;
     height: 100%;
+    min-height: 0;
     gap: 1px;
     background: var(--rk-border);
 }
@@ -337,6 +338,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
     background: var(--rk-white);
 }
 .rk-response-section {
@@ -344,6 +346,7 @@ body {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
     background: var(--rk-white);
 }
 
@@ -746,6 +749,11 @@ body {
 .rk-diff-sbs-col-header + .rk-diff-sbs-col-header {
     border-left: 1px solid var(--rk-border);
 }
+.rk-diff-sbs-body {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
 .rk-diff-sbs-row {
     display: flex;
     border-bottom: 1px solid var(--rk-surface);
@@ -763,6 +771,11 @@ body {
 }
 
 /* --- Unified View --- */
+.rk-diff-unified-body {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
 .rk-diff-unified-header {
     padding: 6px 12px;
     font-size: 11px;

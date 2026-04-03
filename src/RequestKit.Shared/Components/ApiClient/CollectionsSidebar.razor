@@ -30,7 +30,7 @@
                     {
                         @foreach (var folder in collection.Folders)
                         {
-                            @{ RenderFolder(folder, 1); }
+                            RenderFolder(folder, 1);
                         }
 
                         @foreach (var requestId in collection.RootRequestIds)
