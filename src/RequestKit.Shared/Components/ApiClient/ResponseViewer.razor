@@ -72,7 +72,11 @@
     private bool _editorCreated;
 
     private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
-    private void SetViewTab(string tab) => _viewTab = tab;
+    private void SetViewTab(string tab)
+    {
+        if (tab != "body") _editorCreated = false;
+        _viewTab = tab;
+    }
 
     private string StatusClass
     {
