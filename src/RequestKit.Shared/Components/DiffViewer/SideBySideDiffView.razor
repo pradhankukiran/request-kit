@@ -75,48 +75,64 @@
     private static RenderFragment RenderInlineLeft(DiffLine line) => builder =>
     {
         var text = line.LeftText ?? "";
-        var removed = line.InlineChanges?.FirstOrDefault(c => c.Type == DiffLineType.Removed);
-        if (removed is null)
+        var removedSpans = line.InlineChanges?
+            .Where(c => c.Type == DiffLineType.Removed)
+            .OrderBy(c => c.StartIndex)
+            .ToList();
+
+        if (removedSpans is null || removedSpans.Count == 0)
         {
             builder.AddContent(0, text);
             return;
         }
 
         int seq = 0;
-        if (removed.StartIndex > 0)
-            builder.AddContent(seq++, text[..removed.StartIndex]);
+        int pos = 0;
+        foreach (var span in removedSpans)
+        {
+            if (span.StartIndex > pos)
+                builder.AddContent(seq++, text[pos..span.StartIndex]);
 
-        builder.OpenElement(seq++, "mark");
-        builder.AddAttribute(seq++, "class", "rk-diff-inline-removed");
-        builder.AddContent(seq++, text.Substring(removed.StartIndex, removed.Length));
-        builder.CloseElement();
-
-        int afterIdx = removed.StartIndex + removed.Length;
-        if (afterIdx < text.Length)
-            builder.AddContent(seq++, text[afterIdx..]);
+            int end = Math.Min(span.StartIndex + span.Length, text.Length);
+            builder.OpenElement(seq++, "mark");
+            builder.AddAttribute(seq++, "class", "rk-diff-inline-removed");
+            builder.AddContent(seq++, text[span.StartIndex..end]);
+            builder.CloseElement();
+            pos = end;
+        }
+        if (pos < text.Length)
+            builder.AddContent(seq++, text[pos..]);
     };
 
     private static RenderFragment RenderInlineRight(DiffLine line) => builder =>
     {
         var text = line.RightText ?? "";
-        var added = line.InlineChanges?.FirstOrDefault(c => c.Type == DiffLineType.Added);
-        if (added is null)
+        var addedSpans = line.InlineChanges?
+            .Where(c => c.Type == DiffLineType.Added)
+            .OrderBy(c => c.StartIndex)
+            .ToList();
+
+        if (addedSpans is null || addedSpans.Count == 0)
         {
             builder.AddContent(0, text);
             return;
         }
 
         int seq = 0;
-        if (added.StartIndex > 0)
-            builder.AddContent(seq++, text[..added.StartIndex]);
+        int pos = 0;
+        foreach (var span in addedSpans)
+        {
+            if (span.StartIndex > pos)
+                builder.AddContent(seq++, text[pos..span.StartIndex]);
 
-        builder.OpenElement(seq++, "mark");
-        builder.AddAttribute(seq++, "class", "rk-diff-inline-added");
-        builder.AddContent(seq++, text.Substring(added.StartIndex, added.Length));
-        builder.CloseElement();
-
-        int afterIdx = added.StartIndex + added.Length;
-        if (afterIdx < text.Length)
-            builder.AddContent(seq++, text[afterIdx..]);
+            int end = Math.Min(span.StartIndex + span.Length, text.Length);
+            builder.OpenElement(seq++, "mark");
+            builder.AddAttribute(seq++, "class", "rk-diff-inline-added");
+            builder.AddContent(seq++, text[span.StartIndex..end]);
+            builder.CloseElement();
+            pos = end;
+        }
+        if (pos < text.Length)
+            builder.AddContent(seq++, text[pos..]);
     };
 }
