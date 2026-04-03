@@ -42,11 +42,11 @@
                     OnUrlChanged="UpdateUrl"
                     OnSend="SendRequest" />
 
-            <div class="rk-tab-bar">
-                <button class="rk-tab @TabClass("params")" @onclick="@(() => SetTab("params"))">Params</button>
-                <button class="rk-tab @TabClass("headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
-                <button class="rk-tab @TabClass("body")" @onclick="@(() => SetTab("body"))">Body</button>
-                <button class="rk-tab @TabClass("auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
+            <div class="rk-tab-bar" role="tablist">
+                <button class="rk-tab @TabClass("params")" role="tab" aria-selected="@(_activeTab == "params")" @onclick="@(() => SetTab("params"))">Params</button>
+                <button class="rk-tab @TabClass("headers")" role="tab" aria-selected="@(_activeTab == "headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
+                <button class="rk-tab @TabClass("body")" role="tab" aria-selected="@(_activeTab == "body")" @onclick="@(() => SetTab("body"))">Body</button>
+                <button class="rk-tab @TabClass("auth")" role="tab" aria-selected="@(_activeTab == "auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
             </div>
 
             <div class="rk-tab-content">
@@ -180,7 +180,9 @@
             }
 
             // CORS proxy
-            if (ApiState.CorsProxy.Enabled)
+            if (ApiState.CorsProxy.Enabled
+                && (ApiState.CorsProxy.ProxyUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    || ApiState.CorsProxy.ProxyUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
                 url = ApiState.CorsProxy.ProxyUrl + Uri.EscapeDataString(url);
 
             var result = await Fetch.SendAsync(req.Method.ToString(), url, headers, body);
@@ -219,7 +221,7 @@
             {
                 StatusCode = 0,
                 StatusText = ex.Message,
-                Body = ex.ToString(),
+                Body = ex.Message,
                 DetectedContentType = ContentType.PlainText
             });
         }

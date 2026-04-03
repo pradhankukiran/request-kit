@@ -18,7 +18,7 @@
 
         @if (!string.IsNullOrEmpty(_loadError))
         {
-            <div style="color:var(--rk-error);font-size:12px;margin-bottom:12px;">@_loadError</div>
+            <div role="alert" style="color:var(--rk-error);font-size:12px;margin-bottom:12px;">@_loadError</div>
         }
 
         @if (_workspaces.Count > 0)

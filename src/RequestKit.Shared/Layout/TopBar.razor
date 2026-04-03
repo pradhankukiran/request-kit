@@ -6,12 +6,15 @@
     <div class="rk-topbar-left">
         <span class="rk-logo">RequestKit</span>
     </div>
-    <div class="rk-topbar-center">
+    <div class="rk-topbar-center" role="tablist">
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.ApiClient ? "active" : "")"
+                role="tab" aria-selected="@(App.ActiveMode == ToolMode.ApiClient)"
                 @onclick="() => App.SetMode(ToolMode.ApiClient)">API Client</button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.RegexBuilder ? "active" : "")"
+                role="tab" aria-selected="@(App.ActiveMode == ToolMode.RegexBuilder)"
                 @onclick="() => App.SetMode(ToolMode.RegexBuilder)">Regex</button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.DiffViewer ? "active" : "")"
+                role="tab" aria-selected="@(App.ActiveMode == ToolMode.DiffViewer)"
                 @onclick="() => App.SetMode(ToolMode.DiffViewer)">Diff</button>
     </div>
     <div class="rk-topbar-right">
