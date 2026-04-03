@@ -13,13 +13,30 @@ export async function initialize(ref) {
 function loadMonaco() {
     return new Promise((resolve, reject) => {
         if (window.monaco) { resolve(); return; }
+
+        const LOAD_TIMEOUT_MS = 10000;
+        const CDN_URL = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs";
+
+        const timer = setTimeout(() => {
+            reject(new Error("Monaco editor failed to load within " + LOAD_TIMEOUT_MS / 1000 + " seconds"));
+        }, LOAD_TIMEOUT_MS);
+
         const script = document.createElement("script");
-        script.src = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs/loader.min.js";
+        // TODO: Add SRI hash (integrity attribute) once a stable hash is available
+        // for this CDN version. The hash must be recomputed on each version bump.
+        script.src = CDN_URL + "/loader.min.js";
+        script.crossOrigin = "anonymous";
         script.onload = () => {
-            window.require.config({ paths: { vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.52.2/min/vs" } });
-            window.require(["vs/editor/editor.main"], () => resolve());
+            window.require.config({ paths: { vs: CDN_URL } });
+            window.require(["vs/editor/editor.main"], () => {
+                clearTimeout(timer);
+                resolve();
+            });
         };
-        script.onerror = reject;
+        script.onerror = () => {
+            clearTimeout(timer);
+            reject(new Error("Failed to load Monaco editor from CDN: " + script.src));
+        };
         document.head.appendChild(script);
     });
 }
