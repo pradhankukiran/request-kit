@@ -35,7 +35,7 @@
                 <button class="rk-btn rk-btn-sm" @onclick="SendToRegex">Send to Regex</button>
                 <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(true)">Diff Left</button>
                 <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(false)">Diff Right</button>
-                <button class="rk-btn rk-btn-sm" @onclick="CopyBody">Copy</button>
+                <button class="rk-btn rk-btn-sm" @onclick="CopyBody">@(_copySuccess ? "Copied!" : "Copy")</button>
             </div>
             <div class="rk-response-body">
                 <pre class="rk-code-block"><code>@FormatBody(Response.Body, Response.DetectedContentType)</code></pre>
@@ -61,6 +61,7 @@
     [Parameter] public bool IsLoading { get; set; }
 
     private string _viewTab = "body";
+    private bool _copySuccess;
 
     private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
     private void SetViewTab(string tab) => _viewTab = tab;
@@ -95,8 +96,20 @@
 
     private async Task CopyBody()
     {
-        if (Response != null)
+        if (Response == null) return;
+        try
+        {
             await FileExport.CopyToClipboardAsync(Response.Body);
+            _copySuccess = true;
+            StateHasChanged();
+            await Task.Delay(1500);
+            _copySuccess = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Copy failed: {ex.Message}");
+        }
     }
 
     private static string FormatBody(string body, ContentType type)
