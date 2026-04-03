@@ -88,7 +88,8 @@
 
 @code {
     private string ActiveResultTab = "matches";
-    private System.Threading.Timer? _debounceTimer;
+    private CancellationTokenSource? _debounceCts;
+    private const int DebounceDelayMs = 200;
 
     protected override void OnInitialized()
     {
@@ -107,13 +108,26 @@
         DebounceExecute();
     }
 
-    private void DebounceExecute()
+    private async void DebounceExecute()
     {
-        _debounceTimer?.Dispose();
-        _debounceTimer = new System.Threading.Timer(async _ =>
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
         {
+            await Task.Delay(DebounceDelayMs, token);
             await InvokeAsync(ExecuteRegex);
-        }, null, 200, Timeout.Infinite);
+        }
+        catch (OperationCanceledException)
+        {
+            // Debounce cancelled by newer input — expected
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Debounce execute failed: {ex.Message}");
+        }
     }
 
     private async Task ExecuteRegex()
@@ -193,6 +207,7 @@
     public void Dispose()
     {
         State.OnChange -= StateHasChanged;
-        _debounceTimer?.Dispose();
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
     }
 }

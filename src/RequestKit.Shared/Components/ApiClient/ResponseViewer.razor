@@ -1,5 +1,6 @@
 @inject AppState App
 @inject FileInterop FileExport
+@implements IDisposable
 
 <div class="rk-response-viewer">
     @if (IsLoading)
@@ -62,6 +63,7 @@
 
     private string _viewTab = "body";
     private bool _copySuccess;
+    private CancellationTokenSource? _copyCts;
 
     private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
     private void SetViewTab(string tab) => _viewTab = tab;
@@ -99,17 +101,32 @@
         if (Response == null) return;
         try
         {
+            _copyCts?.Cancel();
+            _copyCts?.Dispose();
+            _copyCts = new CancellationTokenSource();
+            var token = _copyCts.Token;
+
             await FileExport.CopyToClipboardAsync(Response.Body);
             _copySuccess = true;
-            StateHasChanged();
-            await Task.Delay(1500);
+            await InvokeAsync(StateHasChanged);
+            await Task.Delay(1500, token);
             _copySuccess = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // Rapid click cancelled the previous delay — ignored
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Copy failed: {ex.Message}");
         }
+    }
+
+    public void Dispose()
+    {
+        _copyCts?.Cancel();
+        _copyCts?.Dispose();
     }
 
     private static string FormatBody(string body, ContentType type)

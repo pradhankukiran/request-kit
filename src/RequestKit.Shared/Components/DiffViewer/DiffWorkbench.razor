@@ -92,7 +92,8 @@
     private string _leftText = "";
     private string _rightText = "";
     private bool _hasCompared;
-    private System.Threading.Timer? _debounceTimer;
+    private CancellationTokenSource? _debounceCts;
+    private const int DebounceDelayMs = 500;
 
     protected override void OnInitialized()
     {
@@ -104,24 +105,38 @@
     public void Dispose()
     {
         Diff.OnChange -= StateHasChanged;
-        _debounceTimer?.Dispose();
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
     }
 
-    private void OnTextChanged()
+    private async void OnTextChanged()
     {
         Diff.SetLeftText(_leftText);
         Diff.SetRightText(_rightText);
 
-        // Debounced auto-diff: restart timer on each keystroke
-        _debounceTimer?.Dispose();
-        _debounceTimer = new System.Threading.Timer(_ =>
+        // Debounced auto-diff: restart on each keystroke
+        _debounceCts?.Cancel();
+        _debounceCts?.Dispose();
+        _debounceCts = new CancellationTokenSource();
+        var token = _debounceCts.Token;
+
+        try
         {
-            InvokeAsync(() =>
+            await Task.Delay(DebounceDelayMs, token);
+            await InvokeAsync(() =>
             {
                 RunDiff();
                 StateHasChanged();
             });
-        }, null, 500, Timeout.Infinite);
+        }
+        catch (OperationCanceledException)
+        {
+            // Debounce cancelled by newer keystroke — expected
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Debounce diff failed: {ex.Message}");
+        }
     }
 
     private void RunDiff()
