@@ -36,18 +36,8 @@
 
     <div class="rk-diff-controls">
         <div class="rk-diff-controls-left">
-            <button class="rk-btn rk-btn-primary" @onclick="RunDiff">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M4 2v12M12 2v12M4 6h8M4 10h8"/>
-                </svg>
-                Compare
-            </button>
-            <button class="rk-btn rk-btn-sm" @onclick="SwapTexts" title="Swap left and right">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path d="M2 5h12M10 2l3 3-3 3M14 11H2M6 8l-3 3 3 3"/>
-                </svg>
-                Swap
-            </button>
+            <button class="rk-btn rk-btn-primary" @onclick="RunDiff">Compare</button>
+            <button class="rk-btn rk-btn-sm" @onclick="SwapTexts" title="Swap left and right">Swap</button>
             <button class="rk-btn rk-btn-sm" @onclick="ClearAll">Clear</button>
         </div>
         <div class="rk-diff-controls-right">
