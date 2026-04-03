@@ -1,0 +1,51 @@
+<div class="rk-kv-editor">
+    @foreach (var entry in Entries)
+    {
+        <div class="rk-kv-row" @key="entry.Id">
+            <input type="checkbox" checked="@entry.Enabled"
+                   @onchange="e => Toggle(entry.Id, (bool)(e.Value ?? false))" />
+            <input type="text" class="rk-input rk-kv-key" placeholder="@(Placeholder + " name")"
+                   value="@entry.Key" @oninput="e => UpdateKey(entry.Id, e.Value?.ToString() ?? string.Empty)" />
+            <input type="text" class="rk-input rk-kv-value" placeholder="value"
+                   value="@entry.Value" @oninput="e => UpdateValue(entry.Id, e.Value?.ToString() ?? string.Empty)" />
+            <button class="rk-btn rk-btn-icon" @onclick="() => Remove(entry.Id)">x</button>
+        </div>
+    }
+    <button class="rk-btn rk-btn-sm" @onclick="Add">+ Add @Placeholder</button>
+</div>
+
+@code {
+    [Parameter] public List<KeyValueEntry> Entries { get; set; } = [];
+    [Parameter] public EventCallback<List<KeyValueEntry>> OnChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "item";
+
+    private void Add()
+    {
+        var updated = new List<KeyValueEntry>(Entries) { new() };
+        OnChanged.InvokeAsync(updated);
+    }
+
+    private void Remove(string id)
+    {
+        var updated = Entries.Where(e => e.Id != id).ToList();
+        OnChanged.InvokeAsync(updated);
+    }
+
+    private void Toggle(string id, bool enabled)
+    {
+        var updated = Entries.Select(e => e.Id == id ? e with { Enabled = enabled } : e).ToList();
+        OnChanged.InvokeAsync(updated);
+    }
+
+    private void UpdateKey(string id, string key)
+    {
+        var updated = Entries.Select(e => e.Id == id ? e with { Key = key } : e).ToList();
+        OnChanged.InvokeAsync(updated);
+    }
+
+    private void UpdateValue(string id, string value)
+    {
+        var updated = Entries.Select(e => e.Id == id ? e with { Value = value } : e).ToList();
+        OnChanged.InvokeAsync(updated);
+    }
+}
