@@ -1,0 +1,115 @@
+@inject AppState App
+@inject FileInterop FileExport
+
+<div class="rk-response-viewer">
+    @if (IsLoading)
+    {
+        <div class="rk-loading">
+            <div class="rk-loading-spinner"></div>
+            <span>Sending request...</span>
+        </div>
+    }
+    else if (Response == null)
+    {
+        <div class="rk-empty-state">
+            <p>Send a request to see the response here.</p>
+            <p style="font-size: 11px; margin-top: 4px;">Ctrl+Enter to send</p>
+        </div>
+    }
+    else
+    {
+        <div class="rk-response-header">
+            <span class="rk-status-badge rk-status-@StatusClass">@Response.StatusCode @Response.StatusText</span>
+            <span class="rk-response-meta">@Response.ResponseTimeMs.ToString("F0") ms</span>
+            <span class="rk-response-meta">@FormatSize(Response.ResponseSizeBytes)</span>
+        </div>
+
+        <div class="rk-tab-bar rk-tab-bar-sm">
+            <button class="rk-tab @(_viewTab == "body" ? "active" : "")" @onclick="() => _viewTab = &quot;body&quot;">Body</button>
+            <button class="rk-tab @(_viewTab == "headers" ? "active" : "")" @onclick="() => _viewTab = &quot;headers&quot;">Headers (@Response.Headers.Count)</button>
+        </div>
+
+        @if (_viewTab == "body")
+        {
+            <div class="rk-response-actions">
+                <button class="rk-btn rk-btn-sm" @onclick="SendToRegex">Send to Regex</button>
+                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(true)">Diff Left</button>
+                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(false)">Diff Right</button>
+                <button class="rk-btn rk-btn-sm" @onclick="CopyBody">Copy</button>
+            </div>
+            <div class="rk-response-body">
+                <pre class="rk-code-block"><code>@FormatBody(Response.Body, Response.DetectedContentType)</code></pre>
+            </div>
+        }
+        else
+        {
+            <div class="rk-response-headers-list">
+                @foreach (var h in Response.Headers)
+                {
+                    <div class="rk-header-row">
+                        <span class="rk-header-key">@h.Key</span>
+                        <span class="rk-header-value">@h.Value</span>
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public ResponseData? Response { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+
+    private string _viewTab = "body";
+
+    private string StatusClass => Response?.StatusCode switch
+    {
+        >= 200 and < 300 => "success",
+        >= 300 and < 400 => "redirect",
+        >= 400 and < 500 => "client-error",
+        >= 500 => "server-error",
+        _ => "error"
+    };
+
+    private void SendToRegex()
+    {
+        if (Response != null)
+        {
+            App.SetLastResponse(Response.Body, Response.DetectedContentType);
+            App.SetMode(ToolMode.RegexBuilder);
+        }
+    }
+
+    private void SendToDiff(bool isLeft)
+    {
+        // Diff piping will be wired in Phase 4
+        App.SetMode(ToolMode.DiffViewer);
+    }
+
+    private async Task CopyBody()
+    {
+        if (Response != null)
+            await FileExport.CopyToClipboardAsync(Response.Body);
+    }
+
+    private static string FormatBody(string body, ContentType type)
+    {
+        if (type == ContentType.Json)
+        {
+            try
+            {
+                var doc = System.Text.Json.JsonDocument.Parse(body);
+                return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            }
+            catch { return body; }
+        }
+        return body;
+    }
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        < 1024 => $"{bytes} B",
+        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+        _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
+    };
+}
