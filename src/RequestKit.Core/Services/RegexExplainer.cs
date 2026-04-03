@@ -129,9 +129,16 @@ public static class RegexExplainer
                 if (inner.Contains(','))
                 {
                     var split = inner.Split(',');
-                    desc = split[1].Length == 0
-                        ? $"{split[0]} or more times"
-                        : $"Between {split[0]} and {split[1]} times";
+                    if (split.Length >= 2)
+                    {
+                        desc = split[1].Length == 0
+                            ? $"{split[0]} or more times"
+                            : $"Between {split[0]} and {split[1]} times";
+                    }
+                    else
+                    {
+                        desc = $"{inner} times";
+                    }
                 }
                 else
                 {

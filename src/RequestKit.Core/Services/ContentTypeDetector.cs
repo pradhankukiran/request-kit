@@ -9,9 +9,9 @@ public static class ContentTypeDetector
         if (!string.IsNullOrEmpty(contentTypeHeader))
         {
             var lower = contentTypeHeader.ToLowerInvariant();
-            if (lower.Contains("json")) return ContentType.Json;
-            if (lower.Contains("xml")) return ContentType.Xml;
-            if (lower.Contains("html")) return ContentType.Html;
+            if (lower.StartsWith("application/json") || lower.Contains("+json")) return ContentType.Json;
+            if (lower.StartsWith("application/xml") || lower.StartsWith("text/xml") || lower.Contains("+xml")) return ContentType.Xml;
+            if (lower.StartsWith("text/html")) return ContentType.Html;
             if (lower.Contains("text/plain")) return ContentType.PlainText;
         }
 

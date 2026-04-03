@@ -72,8 +72,9 @@ public class ApiClientState
             var col = Collections.FirstOrDefault(c => c.Id == collectionId);
             if (col != null)
             {
-                var idx = Collections.IndexOf(col);
-                Collections[idx] = col with { RootRequestIds = [.. col.RootRequestIds, request.Id] };
+                var idx = Collections.FindIndex(c => c.Id == col.Id);
+                if (idx >= 0)
+                    Collections[idx] = col with { RootRequestIds = [.. col.RootRequestIds, request.Id] };
             }
         }
         OnDirty?.Invoke();
@@ -83,11 +84,11 @@ public class ApiClientState
     public void DeleteRequest(string requestId)
     {
         Requests.Remove(requestId);
-        foreach (var col in Collections)
+        for (int i = 0; i < Collections.Count; i++)
         {
-            var idx = Collections.IndexOf(col);
+            var col = Collections[i];
             if (col.RootRequestIds.Contains(requestId))
-                Collections[idx] = col with { RootRequestIds = col.RootRequestIds.Where(id => id != requestId).ToList() };
+                Collections[i] = col with { RootRequestIds = col.RootRequestIds.Where(id => id != requestId).ToList() };
         }
         if (SelectedRequestId == requestId)
         {

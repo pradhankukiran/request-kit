@@ -4,8 +4,23 @@ namespace RequestKit.Core.Services;
 
 public static class DiffEngine
 {
+    private const int MaxInputLength = 100_000;
+
     public static DiffResult ComputeDiff(string left, string right)
     {
+        if ((left?.Length ?? 0) > MaxInputLength || (right?.Length ?? 0) > MaxInputLength)
+        {
+            return new DiffResult
+            {
+                Lines = [new DiffLine
+                {
+                    LeftText = "Input too large to diff",
+                    RightText = "Input too large to diff",
+                    Type = DiffLineType.Modified
+                }]
+            };
+        }
+
         var leftLines = (left ?? "").Split('\n');
         var rightLines = (right ?? "").Split('\n');
 
@@ -77,13 +92,25 @@ public static class DiffEngine
             }
         }
 
+        int added = 0, removed = 0, modified = 0, unchanged = 0;
+        foreach (var line in result)
+        {
+            switch (line.Type)
+            {
+                case DiffLineType.Added: added++; break;
+                case DiffLineType.Removed: removed++; break;
+                case DiffLineType.Modified: modified++; break;
+                case DiffLineType.Unchanged: unchanged++; break;
+            }
+        }
+
         return new DiffResult
         {
             Lines = result,
-            LinesAdded = result.Count(l => l.Type == DiffLineType.Added),
-            LinesRemoved = result.Count(l => l.Type == DiffLineType.Removed),
-            LinesModified = result.Count(l => l.Type == DiffLineType.Modified),
-            LinesUnchanged = result.Count(l => l.Type == DiffLineType.Unchanged)
+            LinesAdded = added,
+            LinesRemoved = removed,
+            LinesModified = modified,
+            LinesUnchanged = unchanged
         };
     }
 
