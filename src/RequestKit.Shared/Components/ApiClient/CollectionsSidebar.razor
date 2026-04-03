@@ -1,0 +1,96 @@
+@inject ApiClientState ApiState
+
+<div class="rk-collections-sidebar">
+    <div class="rk-sidebar-actions">
+        <button class="rk-btn rk-btn-sm" @onclick="AddCollection">+ Collection</button>
+        <button class="rk-btn rk-btn-sm" @onclick="AddRequest" disabled="@(!ApiState.Collections.Any())">+ Request</button>
+    </div>
+
+    <div class="rk-collection-tree">
+        @if (!ApiState.Collections.Any())
+        {
+            <div class="rk-sidebar-empty">
+                <span>No collections yet.</span>
+                <span>Create one to organize your requests.</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var collection in ApiState.Collections)
+            {
+                <div class="rk-tree-collection">
+                    <div class="rk-tree-item rk-tree-folder" @onclick="() => ToggleCollection(collection.Id)">
+                        <span class="rk-tree-chevron @(IsExpanded(collection.Id) ? "expanded" : "")">&#9656;</span>
+                        <span class="rk-tree-folder-icon">&#128193;</span>
+                        <span class="rk-tree-name">@collection.Name</span>
+                        <span class="rk-tree-count">@collection.RootRequestIds.Count</span>
+                    </div>
+
+                    @if (IsExpanded(collection.Id))
+                    {
+                        @foreach (var folder in collection.Folders)
+                        {
+                            RenderFolder(folder, 1);
+                        }
+
+                        @foreach (var requestId in collection.RootRequestIds)
+                        {
+                            if (ApiState.Requests.TryGetValue(requestId, out var request))
+                            {
+                                <div class="rk-tree-item rk-tree-request @(ApiState.SelectedRequestId == requestId ? "active" : "")"
+                                     @onclick="() => SelectRequest(request)">
+                                    <span class="rk-method rk-method-@request.Method.ToString().ToLower()">@request.Method</span>
+                                    <span class="rk-tree-name">@request.Name</span>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private HashSet<string> _expandedCollections = new();
+    private HashSet<string> _expandedFolders = new();
+
+    private bool IsExpanded(string id) => _expandedCollections.Contains(id);
+    private bool IsFolderExpanded(string id) => _expandedFolders.Contains(id);
+
+    private void ToggleCollection(string id)
+    {
+        if (!_expandedCollections.Remove(id))
+            _expandedCollections.Add(id);
+    }
+
+    private void ToggleFolder(string id)
+    {
+        if (!_expandedFolders.Remove(id))
+            _expandedFolders.Add(id);
+    }
+
+    private void SelectRequest(RequestDefinition request)
+    {
+        ApiState.SetActiveRequest(request);
+    }
+
+    private void AddCollection()
+    {
+        var collection = new Collection { Name = $"Collection {ApiState.Collections.Count + 1}" };
+        ApiState.AddCollection(collection);
+        _expandedCollections.Add(collection.Id);
+    }
+
+    private void AddRequest()
+    {
+        var firstCollection = ApiState.Collections.FirstOrDefault();
+        if (firstCollection == null) return;
+
+        var request = new RequestDefinition { Name = "New Request" };
+        ApiState.AddRequest(request, firstCollection.Id);
+        _expandedCollections.Add(firstCollection.Id);
+    }
+
+    private void RenderFolder(RequestFolder folder, int depth) { }
+}
