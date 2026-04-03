@@ -1,0 +1,23 @@
+@page "/workbench"
+@inject AppState App
+@implements IDisposable
+
+<div class="rk-workbench">
+    @switch (App.ActiveMode)
+    {
+        case ToolMode.ApiClient:
+            <RequestBuilder />
+            break;
+        case ToolMode.RegexBuilder:
+            <div class="rk-empty-state">Regex Builder coming soon.</div>
+            break;
+        case ToolMode.DiffViewer:
+            <div class="rk-empty-state">Diff Viewer coming soon.</div>
+            break;
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() => App.OnModeChanged += StateHasChanged;
+    public void Dispose() => App.OnModeChanged -= StateHasChanged;
+}

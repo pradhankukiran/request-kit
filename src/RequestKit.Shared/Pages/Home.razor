@@ -1,0 +1,56 @@
+@page "/"
+@page "/home"
+@inject IWorkspaceStorageService Storage
+@inject ApiClientState ApiState
+@inject AppState App
+@inject NavigationManager Nav
+
+<div class="rk-home">
+    <div class="rk-home-header">
+        <h1 class="rk-home-title">RequestKit</h1>
+        <p class="rk-home-subtitle">API Client + Regex Builder + Diff Viewer</p>
+    </div>
+
+    <div class="rk-home-content">
+        <button class="rk-btn rk-btn-primary rk-btn-lg" @onclick="CreateWorkspace">
+            + New Workspace
+        </button>
+
+        @if (_workspaces.Count > 0)
+        {
+            <div class="rk-section-header">Recent Workspaces</div>
+            @foreach (var ws in _workspaces)
+            {
+                <div class="rk-workspace-card" @key="ws.Id" @onclick="() => OpenWorkspace(ws.Id)">
+                    <div class="rk-workspace-name">@ws.Name</div>
+                    <div class="rk-workspace-meta">@ws.RequestCount requests | @ws.ModifiedAt.ToString("MMM d, yyyy")</div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<WorkspaceSummary> _workspaces = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _workspaces = (await Storage.ListWorkspacesAsync()).ToList(); }
+        catch { _workspaces = []; }
+    }
+
+    private void CreateWorkspace()
+    {
+        ApiState.LoadWorkspace(new Workspace());
+        App.SetMode(ToolMode.ApiClient);
+        Nav.NavigateTo("/workbench");
+    }
+
+    private async Task OpenWorkspace(string id)
+    {
+        var ws = await Storage.LoadWorkspaceAsync(id);
+        ApiState.LoadWorkspace(ws);
+        App.SetMode(ToolMode.ApiClient);
+        Nav.NavigateTo("/workbench");
+    }
+}
