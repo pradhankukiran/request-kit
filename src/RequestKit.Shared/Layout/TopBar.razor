@@ -4,21 +4,24 @@
 
 <header class="rk-topbar">
     <div class="rk-topbar-left">
-        <span class="rk-logo">RequestKit</span>
+        <span class="rk-logo"><span class="rk-logo-icon">&#9883;</span> RequestKit</span>
     </div>
     <div class="rk-topbar-center" role="tablist">
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.ApiClient ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.ApiClient)"
-                @onclick="() => App.SetMode(ToolMode.ApiClient)">API Client</button>
+                @onclick="() => App.SetMode(ToolMode.ApiClient)"><svg class="rk-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> API Client</button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.RegexBuilder ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.RegexBuilder)"
-                @onclick="() => App.SetMode(ToolMode.RegexBuilder)">Regex</button>
+                @onclick="() => App.SetMode(ToolMode.RegexBuilder)"><svg class="rk-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="3"/><path d="M11 3v3M11 16v3M4.2 7l2.6 1.5M15.2 13.5l2.6 1.5M4.2 15l2.6-1.5M15.2 8.5l2.6-1.5"/></svg> Regex</button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.DiffViewer ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.DiffViewer)"
-                @onclick="() => App.SetMode(ToolMode.DiffViewer)">Diff</button>
+                @onclick="() => App.SetMode(ToolMode.DiffViewer)"><svg class="rk-tab-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="8" height="18" rx="1"/><rect x="14" y="3" width="8" height="18" rx="1"/><path d="M6 8h0M6 12h0M6 16h0M18 8h0M18 12h0"/></svg> Diff</button>
     </div>
     <div class="rk-topbar-right">
-        <button class="rk-btn rk-btn-sm" @onclick='() => Nav.NavigateTo("/")'>Home</button>
+        <button class="rk-btn rk-btn-sm" @onclick='() => Nav.NavigateTo("/")'>
+            <svg class="rk-tab-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Home
+        </button>
     </div>
 </header>
 
