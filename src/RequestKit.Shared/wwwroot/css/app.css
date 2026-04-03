@@ -451,6 +451,169 @@ body {
     min-width: 72px;
 }
 
+/* --- API Client Layout with Sidebar --- */
+.rk-api-client-layout {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+}
+.rk-api-sidebar {
+    width: 280px;
+    min-width: 280px;
+    border-right: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.rk-sidebar-tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    flex-shrink: 0;
+}
+.rk-sidebar-tab {
+    flex: 1;
+    padding: 9px 12px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rk-text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s ease;
+    font-family: var(--rk-font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.rk-sidebar-tab:hover { color: var(--rk-text); }
+.rk-sidebar-tab.active {
+    color: var(--rk-primary);
+    border-bottom-color: var(--rk-primary);
+}
+.rk-sidebar-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+.rk-sidebar-toggle {
+    flex-shrink: 0;
+}
+.rk-request-toolbar {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--rk-surface);
+    gap: 4px;
+}
+
+/* --- Collections Sidebar --- */
+.rk-collections-sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.rk-sidebar-actions {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-bottom: 1px solid var(--rk-border);
+    flex-shrink: 0;
+}
+.rk-sidebar-actions .rk-btn-sm {
+    flex: 1;
+    text-align: center;
+    font-size: 11px;
+}
+.rk-sidebar-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 32px 16px;
+    color: var(--rk-text-muted);
+    font-size: 12px;
+    text-align: center;
+}
+.rk-tree-collection {
+    margin-bottom: 2px;
+}
+.rk-tree-chevron {
+    display: inline-block;
+    width: 12px;
+    font-size: 10px;
+    color: var(--rk-text-muted);
+    transition: transform 0.15s ease;
+    flex-shrink: 0;
+}
+.rk-tree-chevron.expanded {
+    transform: rotate(90deg);
+}
+.rk-tree-folder-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+}
+.rk-tree-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rk-tree-count {
+    font-size: 10px;
+    color: var(--rk-text-muted);
+    background: var(--rk-white);
+    padding: 1px 6px;
+    border-radius: 10px;
+    border: 1px solid var(--rk-border);
+    flex-shrink: 0;
+}
+.rk-tree-request .rk-method {
+    flex-shrink: 0;
+}
+
+/* --- History Panel --- */
+.rk-history-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.rk-history-list {
+    flex: 1;
+    overflow-y: auto;
+}
+.rk-history-details {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.rk-history-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--rk-text-muted);
+}
+.rk-history-status {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.rk-status-code-success { color: var(--rk-success); }
+.rk-status-code-redirect { color: var(--rk-warning); }
+.rk-status-code-client-error { color: var(--rk-error); }
+.rk-status-code-server-error { color: var(--rk-error); }
+.rk-status-code-none { color: var(--rk-text-muted); }
+.rk-history-time {
+    font-variant-numeric: tabular-nums;
+}
+.rk-history-timestamp {
+    margin-left: auto;
+}
+
 /* --- Blazor Error UI --- */
 #blazor-error-ui {
     display: none; position: fixed; bottom: 0; left: 0; right: 0;
