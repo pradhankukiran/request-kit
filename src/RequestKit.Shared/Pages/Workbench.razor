@@ -6,13 +6,28 @@
     @switch (App.ActiveMode)
     {
         case ToolMode.ApiClient:
-            <RequestBuilder />
+            <ErrorBoundary>
+                <ChildContent><RequestBuilder /></ChildContent>
+                <ErrorContent Context="ex">
+                    <div class="rk-error-panel">API Client error: @ex.Message</div>
+                </ErrorContent>
+            </ErrorBoundary>
             break;
         case ToolMode.RegexBuilder:
-            <RegexWorkbench />
+            <ErrorBoundary>
+                <ChildContent><RegexWorkbench /></ChildContent>
+                <ErrorContent Context="ex">
+                    <div class="rk-error-panel">Regex Builder error: @ex.Message</div>
+                </ErrorContent>
+            </ErrorBoundary>
             break;
         case ToolMode.DiffViewer:
-            <DiffWorkbench />
+            <ErrorBoundary>
+                <ChildContent><DiffWorkbench /></ChildContent>
+                <ErrorContent Context="ex">
+                    <div class="rk-error-panel">Diff Viewer error: @ex.Message</div>
+                </ErrorContent>
+            </ErrorBoundary>
             break;
     }
 </div>
