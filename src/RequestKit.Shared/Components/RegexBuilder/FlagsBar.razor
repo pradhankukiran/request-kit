@@ -1,0 +1,25 @@
+@inject RegexState State
+
+<div class="rk-flags-bar">
+    @foreach (var flag in AllFlags)
+    {
+        <button class="rk-flag-btn @(State.Flags.Contains(flag.Flag) ? "active" : "")"
+                title="@flag.Description"
+                @onclick="() => State.ToggleFlag(flag.Flag)">
+            @flag.Label
+        </button>
+    }
+</div>
+
+@code {
+    private record FlagInfo(RegexFlag Flag, string Label, string Description);
+
+    private static readonly FlagInfo[] AllFlags =
+    [
+        new(RegexFlag.Global, "g", "Global - find all matches"),
+        new(RegexFlag.CaseInsensitive, "i", "Case Insensitive"),
+        new(RegexFlag.Multiline, "m", "Multiline - ^ and $ match line boundaries"),
+        new(RegexFlag.DotAll, "s", "DotAll - . matches newline"),
+        new(RegexFlag.Unicode, "u", "Unicode")
+    ];
+}
