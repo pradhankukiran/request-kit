@@ -10,7 +10,7 @@
     --rk-primary-light: #EFF6FF;
     --rk-text: #1E293B;
     --rk-text-secondary: #64748B;
-    --rk-text-muted: #94A3B8;
+    --rk-text-muted: #64748B;
     --rk-border: #E2E8F0;
     --rk-surface: #F8FAFC;
     --rk-white: #FFFFFF;
@@ -1209,4 +1209,67 @@ mark.rk-regex-hl {
     color: var(--rk-error);
     font-size: 13px;
     font-weight: 500;
+}
+
+/* Responsive: tablet */
+@media (max-width: 1024px) {
+    .rk-sidebar {
+        width: 220px;
+        min-width: 220px;
+    }
+    .rk-panel {
+        width: 260px;
+        min-width: 260px;
+    }
+}
+
+/* Responsive: mobile */
+@media (max-width: 768px) {
+    .rk-app {
+        flex-direction: column;
+        overflow: auto;
+    }
+    .rk-sidebar {
+        width: 100%;
+        min-width: unset;
+        max-height: 40vh;
+        overflow-y: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--rk-border);
+    }
+    .rk-panel {
+        width: 100%;
+        min-width: unset;
+        max-height: 40vh;
+        overflow-y: auto;
+        border-left: none;
+        border-top: 1px solid var(--rk-border);
+    }
+    .rk-main {
+        min-height: auto;
+    }
+    .rk-topbar {
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .rk-url-bar {
+        flex-wrap: wrap;
+    }
+}
+
+/* Responsive: small mobile */
+@media (max-width: 480px) {
+    .rk-topbar {
+        padding: 6px 8px;
+    }
+    .rk-mode-tabs {
+        gap: 2px;
+    }
+    .rk-mode-tab {
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+    .rk-home {
+        padding: 24px 16px;
+    }
 }
