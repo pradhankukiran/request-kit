@@ -339,6 +339,28 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--rk-border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--rk-text-muted); }
 
+/* --- API Client Layout --- */
+.rk-api-client {
+    display: flex;
+    height: 100%;
+    gap: 1px;
+    background: var(--rk-border);
+}
+.rk-request-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--rk-white);
+}
+.rk-response-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--rk-white);
+}
+
 /* --- Blazor Error UI --- */
 #blazor-error-ui {
     display: none; position: fixed; bottom: 0; left: 0; right: 0;

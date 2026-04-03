@@ -1,6 +1,192 @@
 @inject ApiClientState ApiState
+@inject AppState App
+@inject HttpFetchInterop Fetch
+@inject MonacoEditorInterop Monaco
+@implements IDisposable
 
-<div class="rk-empty-state">
-    <div>API Client</div>
-    <div style="font-size: 12px; margin-top: 8px; color: var(--rk-text-muted);">Select or create a request to get started.</div>
+<div class="rk-api-client">
+    <div class="rk-request-section">
+        <UrlBar Method="@ApiState.ActiveRequest.Method"
+                Url="@ApiState.ActiveRequest.Url"
+                IsLoading="@ApiState.IsLoading"
+                OnMethodChanged="UpdateMethod"
+                OnUrlChanged="UpdateUrl"
+                OnSend="SendRequest" />
+
+        <div class="rk-tab-bar">
+            <button class="rk-tab @(_activeTab == "params" ? "active" : "")" @onclick="() => _activeTab = &quot;params&quot;">Params</button>
+            <button class="rk-tab @(_activeTab == "headers" ? "active" : "")" @onclick="() => _activeTab = &quot;headers&quot;">Headers</button>
+            <button class="rk-tab @(_activeTab == "body" ? "active" : "")" @onclick="() => _activeTab = &quot;body&quot;">Body</button>
+            <button class="rk-tab @(_activeTab == "auth" ? "active" : "")" @onclick="() => _activeTab = &quot;auth&quot;">Auth</button>
+        </div>
+
+        <div class="rk-tab-content">
+            @switch (_activeTab)
+            {
+                case "params":
+                    <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
+                    break;
+                case "headers":
+                    <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
+                    break;
+                case "body":
+                    <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
+                    break;
+                case "auth":
+                    <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
+                    break;
+            }
+        </div>
+    </div>
+
+    <div class="rk-response-section">
+        <ResponseViewer Response="@ApiState.ActiveResponse" IsLoading="@ApiState.IsLoading" />
+    </div>
 </div>
+
+@code {
+    private string _activeTab = "params";
+
+    protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
+    public void Dispose() => ApiState.OnChange -= StateHasChanged;
+
+    private void UpdateMethod(HttpMethod method) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Method = method });
+
+    private void UpdateUrl(string url) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Url = url });
+
+    private void UpdateParams(List<KeyValueEntry> entries) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { QueryParams = entries });
+
+    private void UpdateHeaders(List<KeyValueEntry> entries) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Headers = entries });
+
+    private void UpdateBody(RequestBody body) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Body = body });
+
+    private void UpdateAuth(AuthConfig auth) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Auth = auth });
+
+    private async Task SendRequest()
+    {
+        var req = ApiState.ActiveRequest;
+        if (string.IsNullOrWhiteSpace(req.Url)) return;
+
+        ApiState.SetLoading(true);
+        try
+        {
+            // Build URL with query params
+            var url = req.Url;
+            var activeParams = req.QueryParams.Where(p => p.Enabled && !string.IsNullOrEmpty(p.Key)).ToList();
+            if (activeParams.Count > 0)
+            {
+                var sep = url.Contains('?') ? "&" : "?";
+                url += sep + string.Join("&", activeParams.Select(p =>
+                    $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
+            }
+
+            // Resolve environment variables
+            var env = ApiState.ActiveEnvironment;
+            if (env != null)
+            {
+                var vars = env.Variables.Where(v => v.Enabled)
+                    .ToDictionary(v => v.Key, v => v.Value);
+                url = EnvironmentVariableResolver.Resolve(url, vars);
+            }
+
+            // Build headers
+            var headers = new Dictionary<string, string>();
+            foreach (var h in req.Headers.Where(h => h.Enabled && !string.IsNullOrEmpty(h.Key)))
+                headers[h.Key] = h.Value;
+
+            // Add auth headers
+            switch (req.Auth.Type)
+            {
+                case AuthType.BearerToken:
+                    headers["Authorization"] = $"Bearer {req.Auth.Token}";
+                    break;
+                case AuthType.BasicAuth:
+                    var encoded = Convert.ToBase64String(
+                        System.Text.Encoding.UTF8.GetBytes($"{req.Auth.Username}:{req.Auth.Password}"));
+                    headers["Authorization"] = $"Basic {encoded}";
+                    break;
+                case AuthType.ApiKeyHeader:
+                    headers[req.Auth.ApiKeyName] = req.Auth.ApiKeyValue;
+                    break;
+                case AuthType.CustomHeader:
+                    headers[req.Auth.CustomHeaderName] = req.Auth.CustomHeaderValue;
+                    break;
+            }
+
+            // Build body
+            string? body = null;
+            if (req.Method != HttpMethod.GET && req.Method != HttpMethod.HEAD)
+            {
+                switch (req.Body.Type)
+                {
+                    case BodyType.RawJson:
+                    case BodyType.RawXml:
+                    case BodyType.RawText:
+                        body = req.Body.RawContent;
+                        break;
+                    case BodyType.FormData:
+                        body = string.Join("&", req.Body.FormData
+                            .Where(f => f.Enabled && !string.IsNullOrEmpty(f.Key))
+                            .Select(f => $"{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}"));
+                        if (!headers.ContainsKey("Content-Type"))
+                            headers["Content-Type"] = "application/x-www-form-urlencoded";
+                        break;
+                }
+            }
+
+            // CORS proxy
+            if (ApiState.CorsProxy.Enabled)
+                url = ApiState.CorsProxy.ProxyUrl + Uri.EscapeDataString(url);
+
+            var result = await Fetch.SendAsync(req.Method.ToString(), url, headers, body);
+
+            var contentTypeHeader = result.Headers.FirstOrDefault(h =>
+                h.Key.Equals("content-type", StringComparison.OrdinalIgnoreCase))?.Value;
+            var detectedType = ContentTypeDetector.Detect(result.Body, contentTypeHeader);
+
+            var response = new ResponseData
+            {
+                StatusCode = result.StatusCode,
+                StatusText = result.Success ? result.StatusText : (result.ErrorMessage ?? "Error"),
+                ResponseTimeMs = result.ResponseTimeMs,
+                ResponseSizeBytes = result.ResponseSizeBytes,
+                Headers = result.Headers,
+                Body = result.Body,
+                DetectedContentType = detectedType
+            };
+
+            ApiState.SetResponse(response);
+            App.SetLastResponse(response.Body, detectedType);
+
+            // Add to history
+            ApiState.AddHistoryEntry(new HistoryEntry
+            {
+                RequestName = req.Name,
+                Method = req.Method,
+                Url = req.Url,
+                StatusCode = result.StatusCode,
+                ResponseTimeMs = result.ResponseTimeMs
+            });
+        }
+        catch (Exception ex)
+        {
+            ApiState.SetResponse(new ResponseData
+            {
+                StatusCode = 0,
+                StatusText = ex.Message,
+                Body = ex.ToString(),
+                DetectedContentType = ContentType.PlainText
+            });
+        }
+        finally
+        {
+            ApiState.SetLoading(false);
+        }
+    }
+}
