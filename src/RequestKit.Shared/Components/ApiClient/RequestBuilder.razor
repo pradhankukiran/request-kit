@@ -4,51 +4,87 @@
 @inject MonacoEditorInterop Monaco
 @implements IDisposable
 
-<div class="rk-api-client">
-    <div class="rk-request-section">
-        <UrlBar Method="@ApiState.ActiveRequest.Method"
-                Url="@ApiState.ActiveRequest.Url"
-                IsLoading="@ApiState.IsLoading"
-                OnMethodChanged="UpdateMethod"
-                OnUrlChanged="UpdateUrl"
-                OnSend="SendRequest" />
+<div class="rk-api-client-layout">
+    @if (_sidebarOpen)
+    {
+        <div class="rk-api-sidebar">
+            <div class="rk-sidebar-tab-bar">
+                <button class="rk-sidebar-tab @SidebarTabClass("collections")" @onclick="@(() => SetSidebarTab("collections"))">Collections</button>
+                <button class="rk-sidebar-tab @SidebarTabClass("history")" @onclick="@(() => SetSidebarTab("history"))">History</button>
+            </div>
+            <div class="rk-sidebar-content">
+                @if (_sidebarTab == "collections")
+                {
+                    <CollectionsSidebar />
+                }
+                else
+                {
+                    <HistoryPanel />
+                }
+            </div>
+        </div>
+    }
 
-        <div class="rk-tab-bar">
-            <button class="rk-tab @TabClass("params")" @onclick="@(() => SetTab("params"))">Params</button>
-            <button class="rk-tab @TabClass("headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
-            <button class="rk-tab @TabClass("body")" @onclick="@(() => SetTab("body"))">Body</button>
-            <button class="rk-tab @TabClass("auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
+    <div class="rk-api-client">
+        <div class="rk-request-section">
+            <div class="rk-request-toolbar">
+                <button class="rk-btn-icon rk-sidebar-toggle" @onclick="ToggleSidebar" title="@(_sidebarOpen ? "Hide sidebar" : "Show sidebar")">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <rect x="1" y="2" width="14" height="12" rx="1.5" />
+                        <line x1="5.5" y1="2" x2="5.5" y2="14" />
+                    </svg>
+                </button>
+            </div>
+            <UrlBar Method="@ApiState.ActiveRequest.Method"
+                    Url="@ApiState.ActiveRequest.Url"
+                    IsLoading="@ApiState.IsLoading"
+                    OnMethodChanged="UpdateMethod"
+                    OnUrlChanged="UpdateUrl"
+                    OnSend="SendRequest" />
+
+            <div class="rk-tab-bar">
+                <button class="rk-tab @TabClass("params")" @onclick="@(() => SetTab("params"))">Params</button>
+                <button class="rk-tab @TabClass("headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
+                <button class="rk-tab @TabClass("body")" @onclick="@(() => SetTab("body"))">Body</button>
+                <button class="rk-tab @TabClass("auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
+            </div>
+
+            <div class="rk-tab-content">
+                @switch (_activeTab)
+                {
+                    case "params":
+                        <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
+                        break;
+                    case "headers":
+                        <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
+                        break;
+                    case "body":
+                        <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
+                        break;
+                    case "auth":
+                        <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
+                        break;
+                }
+            </div>
         </div>
 
-        <div class="rk-tab-content">
-            @switch (_activeTab)
-            {
-                case "params":
-                    <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
-                    break;
-                case "headers":
-                    <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
-                    break;
-                case "body":
-                    <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
-                    break;
-                case "auth":
-                    <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
-                    break;
-            }
+        <div class="rk-response-section">
+            <ResponseViewer Response="@ApiState.ActiveResponse" IsLoading="@ApiState.IsLoading" />
         </div>
-    </div>
-
-    <div class="rk-response-section">
-        <ResponseViewer Response="@ApiState.ActiveResponse" IsLoading="@ApiState.IsLoading" />
     </div>
 </div>
 
 @code {
     private string _activeTab = "params";
+    private string _sidebarTab = "collections";
+    private bool _sidebarOpen = true;
 
     private string TabClass(string tab) => _activeTab == tab ? "active" : "";
     private void SetTab(string tab) => _activeTab = tab;
+
+    private string SidebarTabClass(string tab) => _sidebarTab == tab ? "active" : "";
+    private void SetSidebarTab(string tab) => _sidebarTab = tab;
+    private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
 
     protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
     public void Dispose() => ApiState.OnChange -= StateHasChanged;
