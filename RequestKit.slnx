@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RequestKit.Core/RequestKit.Core.csproj" />
+    <Project Path="src/RequestKit.Shared/RequestKit.Shared.csproj" />
+    <Project Path="src/RequestKit.Wasm/RequestKit.Wasm.csproj" />
+  </Folder>
+</Solution>
