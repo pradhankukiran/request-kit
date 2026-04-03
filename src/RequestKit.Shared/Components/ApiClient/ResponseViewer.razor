@@ -1,6 +1,7 @@
 @inject AppState App
 @inject FileInterop FileExport
-@implements IDisposable
+@inject MonacoEditorInterop Monaco
+@implements IAsyncDisposable
 
 <div class="rk-response-viewer">
     @if (IsLoading)
@@ -16,7 +17,7 @@
             <p style="font-weight:600;font-size:15px;color:var(--rk-text);">No response yet</p>
             <p style="color:var(--rk-text-secondary);">Send a request to see the response here.</p>
             <p style="font-size:12px;color:var(--rk-text-muted);margin-top:8px;">
-                <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:4px;font-family:var(--rk-font-sans);font-size:11px;">Ctrl</kbd> + <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:4px;font-family:var(--rk-font-sans);font-size:11px;">Enter</kbd> to send
+                <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Ctrl</kbd> + <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Enter</kbd> to send
             </p>
         </div>
     }
@@ -41,8 +42,8 @@
                 <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(false)">Diff Right</button>
                 <button class="rk-btn rk-btn-sm" @onclick="CopyBody">@(_copySuccess ? "Copied!" : "Copy")</button>
             </div>
-            <div class="rk-response-body">
-                <pre class="rk-code-block"><code>@FormatBody(Response.Body, Response.DetectedContentType)</code></pre>
+            <div class="rk-response-body" style="position:relative;">
+                <div id="response-editor" class="rk-editor-container"></div>
             </div>
         }
         else
@@ -67,6 +68,8 @@
     private string _viewTab = "body";
     private bool _copySuccess;
     private CancellationTokenSource? _copyCts;
+    private ResponseData? _lastRenderedResponse;
+    private bool _editorCreated;
 
     private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
     private void SetViewTab(string tab) => _viewTab = tab;
@@ -84,6 +87,44 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Response != null && _viewTab == "body")
+        {
+            var body = FormatBody(Response.Body, Response.DetectedContentType);
+            var language = MapContentTypeToLanguage(Response.DetectedContentType);
+
+            if (!_editorCreated)
+            {
+                try
+                {
+                    await Monaco.CreateEditorAsync("response-editor", body, language, readOnly: true);
+                    _editorCreated = true;
+                    _lastRenderedResponse = Response;
+                }
+                catch { /* editor container may not be in DOM yet */ }
+            }
+            else if (Response != _lastRenderedResponse)
+            {
+                try
+                {
+                    await Monaco.SetValueAsync("response-editor", body);
+                    await Monaco.SetLanguageAsync("response-editor", language);
+                    _lastRenderedResponse = Response;
+                }
+                catch { }
+            }
+        }
+    }
+
+    private static string MapContentTypeToLanguage(ContentType type) => type switch
+    {
+        ContentType.Json => "json",
+        ContentType.Xml => "xml",
+        ContentType.Html => "html",
+        _ => "plaintext"
+    };
+
     private void SendToRegex()
     {
         if (Response != null)
@@ -95,7 +136,6 @@
 
     private void SendToDiff(bool isLeft)
     {
-        // Diff piping will be wired in Phase 4
         App.SetMode(ToolMode.DiffViewer);
     }
 
@@ -116,20 +156,22 @@
             _copySuccess = false;
             await InvokeAsync(StateHasChanged);
         }
-        catch (OperationCanceledException)
-        {
-            // Rapid click cancelled the previous delay — ignored
-        }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Copy failed: {ex.Message}");
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         _copyCts?.Cancel();
         _copyCts?.Dispose();
+        if (_editorCreated)
+        {
+            try { await Monaco.DisposeEditorAsync("response-editor"); }
+            catch { }
+        }
     }
 
     private static string FormatBody(string body, ContentType type)
