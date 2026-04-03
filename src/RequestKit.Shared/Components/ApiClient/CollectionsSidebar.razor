@@ -18,7 +18,7 @@
         {
             @foreach (var collection in ApiState.Collections)
             {
-                <div class="rk-tree-collection">
+                <div class="rk-tree-collection" @key="collection.Id">
                     <div class="rk-tree-item rk-tree-folder" @onclick="() => ToggleCollection(collection.Id)">
                         <span class="rk-tree-chevron @(IsExpanded(collection.Id) ? "expanded" : "")">&#9656;</span>
                         <span class="rk-tree-folder-icon">&#128193;</span>
@@ -30,14 +30,14 @@
                     {
                         @foreach (var folder in collection.Folders)
                         {
-                            RenderFolder(folder, 1);
+                            @{ RenderFolder(folder, 1); }
                         }
 
                         @foreach (var requestId in collection.RootRequestIds)
                         {
                             if (ApiState.Requests.TryGetValue(requestId, out var request))
                             {
-                                <div class="rk-tree-item rk-tree-request @(ApiState.SelectedRequestId == requestId ? "active" : "")"
+                                <div class="rk-tree-item rk-tree-request @(ApiState.SelectedRequestId == requestId ? "active" : "")" @key="requestId"
                                      @onclick="() => SelectRequest(request)">
                                     <span class="rk-method rk-method-@request.Method.ToString().ToLower()">@request.Method</span>
                                     <span class="rk-tree-name">@request.Name</span>

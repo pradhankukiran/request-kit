@@ -4,11 +4,11 @@
 <div class="rk-common-patterns">
     @foreach (var category in CommonPatternsLibrary.Categories)
     {
-        <div class="rk-pattern-category">
+        <div class="rk-pattern-category" @key="category">
             <div class="rk-section-header">@category</div>
             @foreach (var p in CommonPatternsLibrary.GetByCategory(category))
             {
-                <div class="rk-pattern-card" @onclick="() => SelectPattern(p)">
+                <div class="rk-pattern-card" @key="p.Name" @onclick="() => SelectPattern(p)">
                     <div class="rk-pattern-card-name">@p.Name</div>
                     <div class="rk-pattern-card-sample">@p.SampleMatch</div>
                 </div>

@@ -17,7 +17,7 @@
         {
             var match = State.Matches[idx];
             var matchNum = idx + 1;
-            <div class="rk-match-item">
+            <div class="rk-match-item" @key="idx">
                 <div class="rk-match-header">
                     <span class="rk-match-badge">Match @matchNum</span>
                     <span class="rk-match-pos">Index @match.Index, Length @match.Length</span>
@@ -28,7 +28,7 @@
                     <div class="rk-match-groups">
                         @foreach (var group in match.Groups)
                         {
-                            <div class="rk-match-group-row">
+                            <div class="rk-match-group-row" @key="group.GroupIndex">
                                 <span class="rk-group-label">
                                     Group @group.GroupIndex@(group.Name != null ? $" ({group.Name})" : "")
                                 </span>

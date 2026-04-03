@@ -6,9 +6,10 @@
         <div class="rk-diff-sbs-col-header">Modified</div>
     </div>
     <div class="rk-diff-sbs-body">
-        @foreach (var line in Lines)
+        @for (int i = 0; i < Lines.Count; i++)
         {
-            <div class="rk-diff-sbs-row">
+            var line = Lines[i];
+            <div class="rk-diff-sbs-row" @key="i">
                 @* Left column *@
                 <div class="rk-diff-sbs-cell @LeftCellClass(line)">
                     <span class="rk-diff-line-num">@(line.LeftLineNumber?.ToString() ?? "")</span>

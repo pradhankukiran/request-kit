@@ -15,9 +15,10 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var part in State.Explanation)
+                @for (int i = 0; i < State.Explanation.Count; i++)
                 {
-                    <tr>
+                    var part = State.Explanation[i];
+                    <tr @key="i">
                         <td><code class="rk-explanation-token">@part.Token</code></td>
                         <td class="rk-explanation-desc">@part.Description</td>
                     </tr>
