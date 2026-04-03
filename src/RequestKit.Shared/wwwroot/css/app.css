@@ -843,6 +843,334 @@ mark.rk-diff-inline-added {
     padding: 0 1px;
 }
 
+/* --- Regex Builder --- */
+.rk-regex-builder {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    background: var(--rk-white);
+}
+.rk-regex-sidebar {
+    width: 260px;
+    min-width: 260px;
+    border-right: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.rk-regex-sidebar .rk-tab-content {
+    overflow-y: auto;
+    flex: 1;
+}
+.rk-regex-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--rk-white);
+}
+.rk-regex-results {
+    width: 320px;
+    min-width: 320px;
+    border-left: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.rk-regex-results .rk-tab-content {
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* --- Pattern Input --- */
+.rk-regex-input-area {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--rk-border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.rk-regex-pattern-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius-lg);
+    background: var(--rk-white);
+    box-shadow: var(--rk-shadow-sm);
+    overflow: hidden;
+}
+.rk-regex-slash {
+    padding: 7px 6px;
+    font-family: var(--rk-font-mono);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--rk-primary);
+    user-select: none;
+    flex-shrink: 0;
+}
+.rk-regex-pattern-input {
+    flex: 1;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-family: var(--rk-font-mono);
+    font-size: 14px;
+    padding: 8px 4px;
+}
+.rk-regex-pattern-input:focus {
+    box-shadow: none !important;
+}
+.rk-regex-pipe-btn {
+    align-self: flex-start;
+}
+
+/* --- Flags Bar --- */
+.rk-flags-bar {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    flex-shrink: 0;
+}
+.rk-flag-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid transparent;
+    border-radius: var(--rk-radius-sm);
+    background: transparent;
+    color: var(--rk-text-muted);
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.rk-flag-btn:hover {
+    background: var(--rk-surface);
+    color: var(--rk-text);
+}
+.rk-flag-btn.active {
+    background: var(--rk-primary-light);
+    color: var(--rk-primary);
+    border-color: var(--rk-primary);
+}
+
+/* --- Test String Area --- */
+.rk-regex-test-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    min-height: 0;
+    overflow: hidden;
+}
+.rk-regex-test-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+.rk-regex-test-input {
+    flex: 1;
+    resize: none;
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 120px;
+    tab-size: 4;
+}
+.rk-match-count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    background: var(--rk-success-light);
+    color: var(--rk-success);
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: 1px solid #BBF7D0;
+}
+.rk-match-count-badge-sm {
+    padding: 1px 6px;
+    font-size: 10px;
+    margin-left: 4px;
+}
+
+/* --- Highlighted Matches --- */
+.rk-regex-highlight-area {
+    padding: 0 16px 12px;
+    flex-shrink: 0;
+    max-height: 160px;
+    overflow-y: auto;
+}
+.rk-regex-highlight-output {
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 10px 12px;
+    background: var(--rk-surface);
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius-md);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+mark.rk-regex-hl {
+    background: #FDE68A;
+    color: var(--rk-text);
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+/* --- Match Details --- */
+.rk-match-details {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.rk-match-empty {
+    color: var(--rk-text-muted);
+    font-size: 12px;
+    padding: 16px;
+    text-align: center;
+}
+.rk-match-item {
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius-md);
+    overflow: hidden;
+}
+.rk-match-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    background: var(--rk-surface);
+    border-bottom: 1px solid var(--rk-border);
+}
+.rk-match-badge {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rk-primary);
+}
+.rk-match-pos {
+    font-size: 10px;
+    color: var(--rk-text-muted);
+    font-variant-numeric: tabular-nums;
+}
+.rk-match-value {
+    padding: 6px 10px;
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+    color: var(--rk-text);
+    background: var(--rk-white);
+    word-break: break-all;
+}
+.rk-match-groups {
+    border-top: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+}
+.rk-match-group-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 10px;
+    font-size: 11px;
+    border-bottom: 1px solid var(--rk-border);
+}
+.rk-match-group-row:last-child {
+    border-bottom: none;
+}
+.rk-group-label {
+    font-weight: 600;
+    color: var(--rk-text-secondary);
+    min-width: 80px;
+    flex-shrink: 0;
+}
+.rk-group-value {
+    font-family: var(--rk-font-mono);
+    color: var(--rk-text);
+    word-break: break-all;
+}
+
+/* --- Explanation Panel --- */
+.rk-explanation-panel {
+    font-size: 12px;
+}
+.rk-explanation-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.rk-explanation-table th {
+    text-align: left;
+    padding: 6px 10px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--rk-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    background: var(--rk-surface);
+    border-bottom: 1px solid var(--rk-border);
+    position: sticky;
+    top: 0;
+}
+.rk-explanation-table td {
+    padding: 5px 10px;
+    border-bottom: 1px solid var(--rk-surface);
+}
+.rk-explanation-token {
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rk-primary);
+    background: var(--rk-primary-light);
+    padding: 1px 5px;
+    border-radius: 3px;
+}
+.rk-explanation-desc {
+    color: var(--rk-text-secondary);
+}
+
+/* --- Common Patterns Panel --- */
+.rk-common-patterns {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.rk-pattern-category {
+    margin-bottom: 4px;
+}
+.rk-pattern-card {
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: var(--rk-radius-sm);
+    transition: background 0.1s;
+}
+.rk-pattern-card:hover {
+    background: var(--rk-white);
+}
+.rk-pattern-card-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--rk-text);
+}
+.rk-pattern-card-sample {
+    font-size: 11px;
+    font-family: var(--rk-font-mono);
+    color: var(--rk-text-muted);
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* --- Blazor Error UI --- */
 #blazor-error-ui {
     display: none; position: fixed; bottom: 0; left: 0; right: 0;
