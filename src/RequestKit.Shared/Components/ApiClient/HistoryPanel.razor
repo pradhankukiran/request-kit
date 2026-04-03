@@ -1,0 +1,76 @@
+@inject ApiClientState ApiState
+
+<div class="rk-history-panel">
+    @if (!ApiState.History.Any())
+    {
+        <div class="rk-sidebar-empty">
+            <span>No history yet.</span>
+            <span>Send a request to see it here.</span>
+        </div>
+    }
+    else
+    {
+        <div class="rk-history-list">
+            @foreach (var entry in ApiState.History)
+            {
+                <div class="rk-history-item" @onclick="() => LoadHistoryEntry(entry)">
+                    <span class="rk-method rk-method-@entry.Method.ToString().ToLower()">@entry.Method</span>
+                    <div class="rk-history-details">
+                        <span class="rk-history-url" title="@entry.Url">@TruncateUrl(entry.Url)</span>
+                        <div class="rk-history-meta">
+                            <span class="rk-history-status @StatusClass(entry.StatusCode)">@entry.StatusCode</span>
+                            <span class="rk-history-time">@FormatTime(entry.ResponseTimeMs)</span>
+                            <span class="rk-history-timestamp">@FormatTimestamp(entry.Timestamp)</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private void LoadHistoryEntry(HistoryEntry entry)
+    {
+        var request = new RequestDefinition
+        {
+            Name = !string.IsNullOrEmpty(entry.RequestName) ? entry.RequestName : "From History",
+            Method = entry.Method,
+            Url = entry.Url
+        };
+        ApiState.SetActiveRequest(request);
+    }
+
+    private string TruncateUrl(string url)
+    {
+        if (string.IsNullOrEmpty(url)) return "";
+        // Strip protocol for display
+        var display = url.Replace("https://", "").Replace("http://", "");
+        return display.Length > 50 ? display[..47] + "..." : display;
+    }
+
+    private string FormatTime(double ms)
+    {
+        if (ms < 1) return "<1ms";
+        if (ms < 1000) return $"{ms:F0}ms";
+        return $"{ms / 1000:F2}s";
+    }
+
+    private string FormatTimestamp(DateTime timestamp)
+    {
+        var diff = DateTime.UtcNow - timestamp;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{diff.TotalMinutes:F0}m ago";
+        if (diff.TotalHours < 24) return $"{diff.TotalHours:F0}h ago";
+        return timestamp.ToString("MMM d, HH:mm");
+    }
+
+    private string StatusClass(int statusCode) => statusCode switch
+    {
+        >= 200 and < 300 => "rk-status-code-success",
+        >= 300 and < 400 => "rk-status-code-redirect",
+        >= 400 and < 500 => "rk-status-code-client-error",
+        >= 500 => "rk-status-code-server-error",
+        _ => "rk-status-code-none"
+    };
+}
