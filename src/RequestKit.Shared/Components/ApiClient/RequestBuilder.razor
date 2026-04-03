@@ -14,10 +14,10 @@
                 OnSend="SendRequest" />
 
         <div class="rk-tab-bar">
-            <button class="rk-tab @(_activeTab == "params" ? "active" : "")" @onclick="() => _activeTab = &quot;params&quot;">Params</button>
-            <button class="rk-tab @(_activeTab == "headers" ? "active" : "")" @onclick="() => _activeTab = &quot;headers&quot;">Headers</button>
-            <button class="rk-tab @(_activeTab == "body" ? "active" : "")" @onclick="() => _activeTab = &quot;body&quot;">Body</button>
-            <button class="rk-tab @(_activeTab == "auth" ? "active" : "")" @onclick="() => _activeTab = &quot;auth&quot;">Auth</button>
+            <button class="rk-tab @TabClass("params")" @onclick="@(() => SetTab("params"))">Params</button>
+            <button class="rk-tab @TabClass("headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
+            <button class="rk-tab @TabClass("body")" @onclick="@(() => SetTab("body"))">Body</button>
+            <button class="rk-tab @TabClass("auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
         </div>
 
         <div class="rk-tab-content">
@@ -46,6 +46,9 @@
 
 @code {
     private string _activeTab = "params";
+
+    private string TabClass(string tab) => _activeTab == tab ? "active" : "";
+    private void SetTab(string tab) => _activeTab = tab;
 
     protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
     public void Dispose() => ApiState.OnChange -= StateHasChanged;

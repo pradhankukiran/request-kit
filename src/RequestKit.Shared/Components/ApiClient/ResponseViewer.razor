@@ -25,8 +25,8 @@
         </div>
 
         <div class="rk-tab-bar rk-tab-bar-sm">
-            <button class="rk-tab @(_viewTab == "body" ? "active" : "")" @onclick="() => _viewTab = &quot;body&quot;">Body</button>
-            <button class="rk-tab @(_viewTab == "headers" ? "active" : "")" @onclick="() => _viewTab = &quot;headers&quot;">Headers (@Response.Headers.Count)</button>
+            <button class="rk-tab @ViewTabClass("body")" @onclick="@(() => SetViewTab("body"))">Body</button>
+            <button class="rk-tab @ViewTabClass("headers")" @onclick="@(() => SetViewTab("headers"))">Headers (@Response.Headers.Count)</button>
         </div>
 
         @if (_viewTab == "body")
@@ -62,14 +62,21 @@
 
     private string _viewTab = "body";
 
-    private string StatusClass => Response?.StatusCode switch
+    private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
+    private void SetViewTab(string tab) => _viewTab = tab;
+
+    private string StatusClass
     {
-        >= 200 and < 300 => "success",
-        >= 300 and < 400 => "redirect",
-        >= 400 and < 500 => "client-error",
-        >= 500 => "server-error",
-        _ => "error"
-    };
+        get
+        {
+            var code = Response?.StatusCode ?? 0;
+            if (code >= 200 && code < 300) return "success";
+            if (code >= 300 && code < 400) return "redirect";
+            if (code >= 400 && code < 500) return "client-error";
+            if (code >= 500) return "server-error";
+            return "error";
+        }
+    }
 
     private void SendToRegex()
     {
@@ -106,10 +113,10 @@
         return body;
     }
 
-    private static string FormatSize(long bytes) => bytes switch
+    private static string FormatSize(long bytes)
     {
-        < 1024 => $"{bytes} B",
-        < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
-        _ => $"{bytes / (1024.0 * 1024.0):F1} MB"
-    };
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
 }
