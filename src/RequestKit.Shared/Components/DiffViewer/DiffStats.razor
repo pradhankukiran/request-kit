@@ -1,0 +1,15 @@
+@using RequestKit.Core.Models
+
+<div class="rk-diff-stats">
+    @if (Result is not null)
+    {
+        <span class="rk-diff-stat rk-diff-stat-added">+@Result.LinesAdded added</span>
+        <span class="rk-diff-stat rk-diff-stat-removed">-@Result.LinesRemoved removed</span>
+        <span class="rk-diff-stat rk-diff-stat-modified">~@Result.LinesModified modified</span>
+        <span class="rk-diff-stat rk-diff-stat-unchanged">@Result.LinesUnchanged unchanged</span>
+    }
+</div>
+
+@code {
+    [Parameter] public DiffResult? Result { get; set; }
+}

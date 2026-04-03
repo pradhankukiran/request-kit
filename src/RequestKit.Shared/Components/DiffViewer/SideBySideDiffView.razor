@@ -1,0 +1,121 @@
+@using RequestKit.Core.Models
+
+<div class="rk-diff-view rk-diff-sbs">
+    <div class="rk-diff-sbs-header">
+        <div class="rk-diff-sbs-col-header">Original</div>
+        <div class="rk-diff-sbs-col-header">Modified</div>
+    </div>
+    <div class="rk-diff-sbs-body">
+        @foreach (var line in Lines)
+        {
+            <div class="rk-diff-sbs-row">
+                @* Left column *@
+                <div class="rk-diff-sbs-cell @LeftCellClass(line)">
+                    <span class="rk-diff-line-num">@(line.LeftLineNumber?.ToString() ?? "")</span>
+                    <span class="rk-diff-line-prefix">@LeftPrefix(line)</span>
+                    @if (line.Type == DiffLineType.Modified && line.InlineChanges is not null)
+                    {
+                        <span class="rk-diff-line-text">@RenderInlineLeft(line)</span>
+                    }
+                    else
+                    {
+                        <span class="rk-diff-line-text">@(line.LeftText ?? "")</span>
+                    }
+                </div>
+                @* Right column *@
+                <div class="rk-diff-sbs-cell @RightCellClass(line)">
+                    <span class="rk-diff-line-num">@(line.RightLineNumber?.ToString() ?? "")</span>
+                    <span class="rk-diff-line-prefix">@RightPrefix(line)</span>
+                    @if (line.Type == DiffLineType.Modified && line.InlineChanges is not null)
+                    {
+                        <span class="rk-diff-line-text">@RenderInlineRight(line)</span>
+                    }
+                    else
+                    {
+                        <span class="rk-diff-line-text">@(line.RightText ?? "")</span>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<DiffLine> Lines { get; set; } = [];
+
+    private static string LeftCellClass(DiffLine line) => line.Type switch
+    {
+        DiffLineType.Removed => "rk-diff-removed",
+        DiffLineType.Modified => "rk-diff-modified-left",
+        _ => "rk-diff-unchanged"
+    };
+
+    private static string RightCellClass(DiffLine line) => line.Type switch
+    {
+        DiffLineType.Added => "rk-diff-added",
+        DiffLineType.Modified => "rk-diff-modified-right",
+        _ => "rk-diff-unchanged"
+    };
+
+    private static string LeftPrefix(DiffLine line) => line.Type switch
+    {
+        DiffLineType.Removed => "-",
+        DiffLineType.Modified => "-",
+        _ => " "
+    };
+
+    private static string RightPrefix(DiffLine line) => line.Type switch
+    {
+        DiffLineType.Added => "+",
+        DiffLineType.Modified => "+",
+        _ => " "
+    };
+
+    private static RenderFragment RenderInlineLeft(DiffLine line) => builder =>
+    {
+        var text = line.LeftText ?? "";
+        var removed = line.InlineChanges?.FirstOrDefault(c => c.Type == DiffLineType.Removed);
+        if (removed is null)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        int seq = 0;
+        if (removed.StartIndex > 0)
+            builder.AddContent(seq++, text[..removed.StartIndex]);
+
+        builder.OpenElement(seq++, "mark");
+        builder.AddAttribute(seq++, "class", "rk-diff-inline-removed");
+        builder.AddContent(seq++, text.Substring(removed.StartIndex, removed.Length));
+        builder.CloseElement();
+
+        int afterIdx = removed.StartIndex + removed.Length;
+        if (afterIdx < text.Length)
+            builder.AddContent(seq++, text[afterIdx..]);
+    };
+
+    private static RenderFragment RenderInlineRight(DiffLine line) => builder =>
+    {
+        var text = line.RightText ?? "";
+        var added = line.InlineChanges?.FirstOrDefault(c => c.Type == DiffLineType.Added);
+        if (added is null)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        int seq = 0;
+        if (added.StartIndex > 0)
+            builder.AddContent(seq++, text[..added.StartIndex]);
+
+        builder.OpenElement(seq++, "mark");
+        builder.AddAttribute(seq++, "class", "rk-diff-inline-added");
+        builder.AddContent(seq++, text.Substring(added.StartIndex, added.Length));
+        builder.CloseElement();
+
+        int afterIdx = added.StartIndex + added.Length;
+        if (afterIdx < text.Length)
+            builder.AddContent(seq++, text[afterIdx..]);
+    };
+}

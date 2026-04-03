@@ -1,0 +1,57 @@
+@using RequestKit.Core.Models
+
+<div class="rk-diff-view rk-diff-unified">
+    <div class="rk-diff-unified-header">
+        <span>Unified Diff</span>
+    </div>
+    <div class="rk-diff-unified-body">
+        @foreach (var line in Lines)
+        {
+            @switch (line.Type)
+            {
+                case DiffLineType.Unchanged:
+                    <div class="rk-diff-unified-line rk-diff-unchanged">
+                        <span class="rk-diff-line-num">@line.LeftLineNumber</span>
+                        <span class="rk-diff-line-num">@line.RightLineNumber</span>
+                        <span class="rk-diff-line-prefix"> </span>
+                        <span class="rk-diff-line-text">@line.LeftText</span>
+                    </div>
+                    break;
+                case DiffLineType.Removed:
+                    <div class="rk-diff-unified-line rk-diff-removed">
+                        <span class="rk-diff-line-num">@line.LeftLineNumber</span>
+                        <span class="rk-diff-line-num"></span>
+                        <span class="rk-diff-line-prefix">-</span>
+                        <span class="rk-diff-line-text">@line.LeftText</span>
+                    </div>
+                    break;
+                case DiffLineType.Added:
+                    <div class="rk-diff-unified-line rk-diff-added">
+                        <span class="rk-diff-line-num"></span>
+                        <span class="rk-diff-line-num">@line.RightLineNumber</span>
+                        <span class="rk-diff-line-prefix">+</span>
+                        <span class="rk-diff-line-text">@line.RightText</span>
+                    </div>
+                    break;
+                case DiffLineType.Modified:
+                    <div class="rk-diff-unified-line rk-diff-removed">
+                        <span class="rk-diff-line-num">@line.LeftLineNumber</span>
+                        <span class="rk-diff-line-num"></span>
+                        <span class="rk-diff-line-prefix">-</span>
+                        <span class="rk-diff-line-text">@line.LeftText</span>
+                    </div>
+                    <div class="rk-diff-unified-line rk-diff-added">
+                        <span class="rk-diff-line-num"></span>
+                        <span class="rk-diff-line-num">@line.RightLineNumber</span>
+                        <span class="rk-diff-line-prefix">+</span>
+                        <span class="rk-diff-line-text">@line.RightText</span>
+                    </div>
+                    break;
+            }
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<DiffLine> Lines { get; set; } = [];
+}

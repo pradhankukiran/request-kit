@@ -1,0 +1,173 @@
+@inject DiffState Diff
+@inject AppState App
+@implements IDisposable
+
+<div class="rk-diff-workbench">
+    <div class="rk-diff-inputs">
+        <div class="rk-diff-input-col">
+            <div class="rk-diff-input-header">
+                <label class="rk-label">Original</label>
+                @if (App.LastResponseBody is not null)
+                {
+                    <button class="rk-btn rk-btn-sm" @onclick="PipeToLeft" title="Load last API response">Pipe Response</button>
+                }
+            </div>
+            <textarea class="rk-textarea rk-diff-textarea"
+                      placeholder="Paste original text here..."
+                      @bind="_leftText"
+                      @bind:event="oninput"
+                      @bind:after="OnTextChanged"></textarea>
+        </div>
+        <div class="rk-diff-input-col">
+            <div class="rk-diff-input-header">
+                <label class="rk-label">Modified</label>
+                @if (App.LastResponseBody is not null)
+                {
+                    <button class="rk-btn rk-btn-sm" @onclick="PipeToRight" title="Load last API response">Pipe Response</button>
+                }
+            </div>
+            <textarea class="rk-textarea rk-diff-textarea"
+                      placeholder="Paste modified text here..."
+                      @bind="_rightText"
+                      @bind:event="oninput"
+                      @bind:after="OnTextChanged"></textarea>
+        </div>
+    </div>
+
+    <div class="rk-diff-controls">
+        <div class="rk-diff-controls-left">
+            <button class="rk-btn rk-btn-primary" @onclick="RunDiff">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M4 2v12M12 2v12M4 6h8M4 10h8"/>
+                </svg>
+                Compare
+            </button>
+            <button class="rk-btn rk-btn-sm" @onclick="SwapTexts" title="Swap left and right">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M2 5h12M10 2l3 3-3 3M14 11H2M6 8l-3 3 3 3"/>
+                </svg>
+                Swap
+            </button>
+            <button class="rk-btn rk-btn-sm" @onclick="ClearAll">Clear</button>
+        </div>
+        <div class="rk-diff-controls-right">
+            <div class="rk-diff-view-toggle">
+                <button class="rk-btn rk-btn-sm @(Diff.ViewMode == DiffViewMode.SideBySide ? "rk-btn-primary" : "")"
+                        @onclick="@(() => SetViewMode(DiffViewMode.SideBySide))">Side by Side</button>
+                <button class="rk-btn rk-btn-sm @(Diff.ViewMode == DiffViewMode.Unified ? "rk-btn-primary" : "")"
+                        @onclick="@(() => SetViewMode(DiffViewMode.Unified))">Unified</button>
+            </div>
+            <DiffStats Result="@Diff.Result" />
+        </div>
+    </div>
+
+    <div class="rk-diff-output">
+        @if (Diff.Result is not null && Diff.Result.Lines.Count > 0)
+        {
+            @if (Diff.ViewMode == DiffViewMode.SideBySide)
+            {
+                <SideBySideDiffView Lines="@Diff.Result.Lines" />
+            }
+            else
+            {
+                <UnifiedDiffView Lines="@Diff.Result.Lines" />
+            }
+        }
+        else if (_hasCompared)
+        {
+            <div class="rk-empty-state">
+                <span>No differences found. The texts are identical.</span>
+            </div>
+        }
+        else
+        {
+            <div class="rk-empty-state">
+                <span>Paste text on both sides and click Compare to see differences.</span>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private string _leftText = "";
+    private string _rightText = "";
+    private bool _hasCompared;
+    private System.Threading.Timer? _debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        Diff.OnChange += StateHasChanged;
+        _leftText = Diff.LeftText;
+        _rightText = Diff.RightText;
+    }
+
+    public void Dispose()
+    {
+        Diff.OnChange -= StateHasChanged;
+        _debounceTimer?.Dispose();
+    }
+
+    private void OnTextChanged()
+    {
+        Diff.SetLeftText(_leftText);
+        Diff.SetRightText(_rightText);
+
+        // Debounced auto-diff: restart timer on each keystroke
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(_ =>
+        {
+            InvokeAsync(() =>
+            {
+                RunDiff();
+                StateHasChanged();
+            });
+        }, null, 500, Timeout.Infinite);
+    }
+
+    private void RunDiff()
+    {
+        _hasCompared = true;
+        var result = DiffEngine.ComputeDiff(_leftText, _rightText);
+        Diff.SetResult(result);
+    }
+
+    private void SetViewMode(DiffViewMode mode) => Diff.SetViewMode(mode);
+
+    private void SwapTexts()
+    {
+        (_leftText, _rightText) = (_rightText, _leftText);
+        Diff.SetLeftText(_leftText);
+        Diff.SetRightText(_rightText);
+        if (_hasCompared) RunDiff();
+    }
+
+    private void ClearAll()
+    {
+        _leftText = "";
+        _rightText = "";
+        _hasCompared = false;
+        Diff.SetLeftText("");
+        Diff.SetRightText("");
+        Diff.SetResult(new DiffResult());
+    }
+
+    private void PipeToLeft()
+    {
+        if (App.LastResponseBody is not null)
+        {
+            _leftText = App.LastResponseBody;
+            Diff.SetLeftText(_leftText);
+            if (_hasCompared) RunDiff();
+        }
+    }
+
+    private void PipeToRight()
+    {
+        if (App.LastResponseBody is not null)
+        {
+            _rightText = App.LastResponseBody;
+            Diff.SetRightText(_rightText);
+            if (_hasCompared) RunDiff();
+        }
+    }
+}
