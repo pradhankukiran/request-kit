@@ -1,0 +1,43 @@
+@inject RegexState State
+
+<div class="rk-match-details">
+    @if (State.ErrorMessage is not null)
+    {
+        <div class="rk-error-banner">
+            <span>@State.ErrorMessage</span>
+        </div>
+    }
+    else if (State.Matches.Count == 0 && !string.IsNullOrEmpty(State.Pattern))
+    {
+        <div class="rk-match-empty">No matches found.</div>
+    }
+    else
+    {
+        @for (int idx = 0; idx < State.Matches.Count; idx++)
+        {
+            var match = State.Matches[idx];
+            var matchNum = idx + 1;
+            <div class="rk-match-item">
+                <div class="rk-match-header">
+                    <span class="rk-match-badge">Match @matchNum</span>
+                    <span class="rk-match-pos">Index @match.Index, Length @match.Length</span>
+                </div>
+                <div class="rk-match-value">@match.Value</div>
+                @if (match.Groups.Count > 0)
+                {
+                    <div class="rk-match-groups">
+                        @foreach (var group in match.Groups)
+                        {
+                            <div class="rk-match-group-row">
+                                <span class="rk-group-label">
+                                    Group @group.GroupIndex@(group.Name != null ? $" ({group.Name})" : "")
+                                </span>
+                                <span class="rk-group-value">@(string.IsNullOrEmpty(group.Value) ? "(empty)" : group.Value)</span>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    }
+</div>
