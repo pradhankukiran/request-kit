@@ -1,0 +1,198 @@
+@inject RegexState State
+@inject RegexInterop Regex
+@inject AppState App
+@implements IDisposable
+
+<div class="rk-regex-builder">
+    <!-- Left: Common Patterns sidebar -->
+    <div class="rk-regex-sidebar">
+        <div class="rk-tab-bar rk-tab-bar-sm">
+            <span class="rk-tab active">Common Patterns</span>
+        </div>
+        <div class="rk-tab-content">
+            <CommonPatternsPanel OnPatternSelected="OnCommonPatternSelected" />
+        </div>
+    </div>
+
+    <!-- Center: Pattern + Test String + Highlighted Output -->
+    <div class="rk-regex-main">
+        <!-- Pattern input row -->
+        <div class="rk-regex-input-area">
+            <div class="rk-regex-pattern-row">
+                <span class="rk-regex-slash">/</span>
+                <input class="rk-input rk-regex-pattern-input"
+                       placeholder="Enter regex pattern..."
+                       value="@State.Pattern"
+                       @oninput="OnPatternInput" />
+                <span class="rk-regex-slash">/</span>
+                <FlagsBar />
+            </div>
+            @if (App.LastResponseBody is not null)
+            {
+                <button class="rk-btn rk-btn-sm rk-regex-pipe-btn" @onclick="PipeFromResponse">
+                    Pipe from Response
+                </button>
+            }
+        </div>
+
+        <!-- Test string -->
+        <div class="rk-regex-test-area">
+            <div class="rk-regex-test-header">
+                <span class="rk-label" style="margin-bottom:0;">Test String</span>
+                <span class="rk-regex-match-count">
+                    @if (State.Matches.Count > 0)
+                    {
+                        <span class="rk-match-count-badge">@State.Matches.Count match@(State.Matches.Count != 1 ? "es" : "")</span>
+                    }
+                </span>
+            </div>
+            <textarea class="rk-textarea rk-regex-test-input"
+                      placeholder="Enter test string..."
+                      @oninput="OnTestStringInput">@State.TestString</textarea>
+        </div>
+
+        <!-- Highlighted preview -->
+        @if (!string.IsNullOrEmpty(State.TestString) && State.Matches.Count > 0)
+        {
+            <div class="rk-regex-highlight-area">
+                <span class="rk-label">Highlighted Matches</span>
+                <div class="rk-regex-highlight-output">@((MarkupString)BuildHighlightedHtml())</div>
+            </div>
+        }
+    </div>
+
+    <!-- Right: Matches + Explanation -->
+    <div class="rk-regex-results">
+        <div class="rk-tab-bar rk-tab-bar-sm">
+            <button class="rk-tab @(ActiveResultTab == "matches" ? "active" : "")" @onclick='() => ActiveResultTab = "matches"'>
+                Matches
+                @if (State.Matches.Count > 0)
+                {
+                    <span class="rk-match-count-badge rk-match-count-badge-sm">@State.Matches.Count</span>
+                }
+            </button>
+            <button class="rk-tab @(ActiveResultTab == "explanation" ? "active" : "")" @onclick='() => ActiveResultTab = "explanation"'>Explanation</button>
+        </div>
+        <div class="rk-tab-content">
+            @if (ActiveResultTab == "matches")
+            {
+                <MatchDetails />
+            }
+            else
+            {
+                <ExplanationPanel />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string ActiveResultTab = "matches";
+    private System.Threading.Timer? _debounceTimer;
+
+    protected override void OnInitialized()
+    {
+        State.OnChange += StateHasChanged;
+    }
+
+    private void OnPatternInput(ChangeEventArgs e)
+    {
+        State.SetPattern(e.Value?.ToString() ?? "");
+        DebounceExecute();
+    }
+
+    private void OnTestStringInput(ChangeEventArgs e)
+    {
+        State.SetTestString(e.Value?.ToString() ?? "");
+        DebounceExecute();
+    }
+
+    private void DebounceExecute()
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(ExecuteRegex);
+        }, null, 200, Timeout.Infinite);
+    }
+
+    private async Task ExecuteRegex()
+    {
+        if (string.IsNullOrEmpty(State.Pattern))
+        {
+            State.SetResults([], null, []);
+            return;
+        }
+
+        var flags = BuildFlagsString();
+        var explanation = RegexExplainer.Explain(State.Pattern);
+
+        try
+        {
+            var (matches, error) = await Regex.ExecuteAsync(State.Pattern, State.TestString, flags);
+            State.SetResults(matches, error, explanation);
+        }
+        catch (Exception ex)
+        {
+            State.SetResults([], ex.Message, explanation);
+        }
+    }
+
+    private string BuildFlagsString()
+    {
+        var sb = new System.Text.StringBuilder();
+        if (State.Flags.Contains(RegexFlag.Global)) sb.Append('g');
+        if (State.Flags.Contains(RegexFlag.CaseInsensitive)) sb.Append('i');
+        if (State.Flags.Contains(RegexFlag.Multiline)) sb.Append('m');
+        if (State.Flags.Contains(RegexFlag.DotAll)) sb.Append('s');
+        if (State.Flags.Contains(RegexFlag.Unicode)) sb.Append('u');
+        return sb.ToString();
+    }
+
+    private void PipeFromResponse()
+    {
+        if (App.LastResponseBody is not null)
+        {
+            State.SetTestString(App.LastResponseBody);
+            DebounceExecute();
+        }
+    }
+
+    private async Task OnCommonPatternSelected(CommonPattern _)
+    {
+        await ExecuteRegex();
+    }
+
+    private string BuildHighlightedHtml()
+    {
+        var text = State.TestString;
+        if (string.IsNullOrEmpty(text) || State.Matches.Count == 0)
+            return System.Net.WebUtility.HtmlEncode(text);
+
+        var sorted = State.Matches.OrderBy(m => m.Index).ThenByDescending(m => m.Length).ToList();
+        var sb = new System.Text.StringBuilder();
+        int lastEnd = 0;
+
+        foreach (var match in sorted)
+        {
+            if (match.Index < lastEnd) continue; // skip overlapping
+            if (match.Index > lastEnd)
+                sb.Append(System.Net.WebUtility.HtmlEncode(text[lastEnd..match.Index]));
+            sb.Append("<mark class=\"rk-regex-hl\">");
+            sb.Append(System.Net.WebUtility.HtmlEncode(text.Substring(match.Index, match.Length)));
+            sb.Append("</mark>");
+            lastEnd = match.Index + match.Length;
+        }
+
+        if (lastEnd < text.Length)
+            sb.Append(System.Net.WebUtility.HtmlEncode(text[lastEnd..]));
+
+        return sb.ToString();
+    }
+
+    public void Dispose()
+    {
+        State.OnChange -= StateHasChanged;
+        _debounceTimer?.Dispose();
+    }
+}
