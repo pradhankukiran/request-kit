@@ -16,6 +16,11 @@
             + New Workspace
         </button>
 
+        @if (!string.IsNullOrEmpty(_loadError))
+        {
+            <div style="color:var(--rk-error);font-size:12px;margin-bottom:12px;">@_loadError</div>
+        }
+
         @if (_workspaces.Count > 0)
         {
             <div class="rk-section-header">Recent Workspaces</div>
@@ -32,11 +37,20 @@
 
 @code {
     private List<WorkspaceSummary> _workspaces = [];
+    private string? _loadError;
 
     protected override async Task OnInitializedAsync()
     {
-        try { _workspaces = (await Storage.ListWorkspacesAsync()).ToList(); }
-        catch { _workspaces = []; }
+        try
+        {
+            _workspaces = (await Storage.ListWorkspacesAsync()).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to load workspaces: {ex.Message}");
+            _loadError = "Failed to load workspaces. Storage may be unavailable.";
+            _workspaces = [];
+        }
     }
 
     private void CreateWorkspace()
