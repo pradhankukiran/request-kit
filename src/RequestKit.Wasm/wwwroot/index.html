@@ -1,33 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RequestKit.Wasm</title>
+    <title>RequestKit</title>
     <base href="/" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='12' height='12' x='2' y='2' rx='2' fill='%232563EB'/></svg>" />
     <link rel="preload" id="webassembly" />
-    <link rel="stylesheet" href="css/app.css" />
-    <!-- If you add any scoped CSS files, uncomment the following to load them
-    <link href="RequestKit.Wasm.styles.css" rel="stylesheet" /> -->
+    <link rel="stylesheet" href="_content/RequestKit.Shared/css/app.css" />
     <script type="importmap"></script>
 </head>
-
 <body>
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:Inter,sans-serif;color:#1E293B;">
+            <div style="text-align:center;">
+                <div style="font-size:20px;font-weight:700;margin-bottom:8px;">RequestKit</div>
+                <div style="font-size:13px;color:#94A3B8;">Loading...</div>
+            </div>
+        </div>
     </div>
-
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+    <div id="blazor-error-ui" style="display:none;position:fixed;bottom:0;left:0;right:0;padding:8px 16px;background:#DC2626;color:white;font-size:13px;">
+        An error occurred. <a href="." style="color:white;text-decoration:underline;">Reload</a>
     </div>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
-
 </html>
