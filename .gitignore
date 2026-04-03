@@ -1,0 +1,17 @@
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+*.swp
+*~
+node_modules/
+TestResults/
+coverage/
+[Dd]ebug/
+[Rr]elease/
+output/
+.vercel/
+.DS_Store
+Thumbs.db

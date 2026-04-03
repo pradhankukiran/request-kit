@@ -1,0 +1,22 @@
+{
+  "buildCommand": "dotnet publish src/RequestKit.Wasm/RequestKit.Wasm.csproj -c Release -o output --nologo",
+  "outputDirectory": "output/wwwroot",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/_framework/(.*\\.wasm)$",
+      "headers": [
+        { "key": "Content-Type", "value": "application/wasm" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/_framework/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}
