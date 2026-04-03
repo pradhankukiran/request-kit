@@ -457,7 +457,7 @@ body {
     border-bottom: 1px solid var(--rk-border);
     background: var(--rk-surface);
 }
-.rk-response-body { flex: 1; overflow: auto; }
+.rk-response-body { flex: 1; overflow: hidden; min-height: 200px; }
 .rk-code-block {
     margin: 0;
     padding: 14px 16px;
