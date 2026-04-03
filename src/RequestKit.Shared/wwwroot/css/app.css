@@ -23,9 +23,9 @@
     --rk-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
     --rk-shadow-md: 0 6px 16px rgba(0, 0, 0, 0.1);
     --rk-shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.15);
-    --rk-radius-sm: 6px;
-    --rk-radius-md: 8px;
-    --rk-radius-lg: 12px;
+    --rk-radius-sm: 0;
+    --rk-radius-md: 0;
+    --rk-radius-lg: 0;
     --rk-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --rk-font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
 }
@@ -152,7 +152,7 @@ body {
 .rk-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%2394A3B8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; padding-right: 28px; }
 
 /* --- Method Badges --- */
-.rk-method { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 3px; font-family: var(--rk-font-mono); text-transform: uppercase; }
+.rk-method { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 0; font-family: var(--rk-font-mono); text-transform: uppercase; }
 .rk-method-get { color: #16A34A; background: #F0FDF4; }
 .rk-method-post { color: #2563EB; background: #EFF6FF; }
 .rk-method-put { color: #D97706; background: #FFFBEB; }
@@ -439,7 +439,7 @@ body {
 }
 .rk-status-badge {
     padding: 5px 12px;
-    border-radius: 4px;
+    border-radius: 0;
     font-size: 13px;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -643,7 +643,7 @@ body {
     color: var(--rk-text-muted);
     background: var(--rk-white);
     padding: 1px 6px;
-    border-radius: 10px;
+    border-radius: 0;
     border: 1px solid var(--rk-border);
     flex-shrink: 0;
 }
@@ -920,13 +920,13 @@ body {
 mark.rk-diff-inline-removed {
     background: #FECACA;
     color: var(--rk-error);
-    border-radius: 2px;
+    border-radius: 0;
     padding: 0 1px;
 }
 mark.rk-diff-inline-added {
     background: #BBF7D0;
     color: #166534;
-    border-radius: 2px;
+    border-radius: 0;
     padding: 0 1px;
 }
 
@@ -1083,7 +1083,7 @@ mark.rk-diff-inline-added {
     color: var(--rk-success);
     font-size: 11px;
     font-weight: 600;
-    border-radius: 10px;
+    border-radius: 0;
     border: 1px solid #BBF7D0;
 }
 .rk-match-count-badge-sm {
@@ -1113,7 +1113,7 @@ mark.rk-diff-inline-added {
 mark.rk-regex-hl {
     background: #FDE68A;
     color: var(--rk-text);
-    border-radius: 2px;
+    border-radius: 0;
     padding: 0 1px;
 }
 
@@ -1219,7 +1219,7 @@ mark.rk-regex-hl {
     color: var(--rk-primary);
     background: var(--rk-primary-light);
     padding: 1px 5px;
-    border-radius: 3px;
+    border-radius: 0;
 }
 .rk-explanation-desc {
     color: var(--rk-text-secondary);
