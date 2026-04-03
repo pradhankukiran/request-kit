@@ -4,6 +4,14 @@ namespace RequestKit.Shared.Interop;
 
 public class MonacoEditorInterop : IAsyncDisposable
 {
+    private static readonly HashSet<string> AllowedLanguages = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "json", "xml", "html", "css", "javascript", "typescript",
+        "plaintext", "markdown", "yaml", "csharp", "python",
+        "go", "rust", "java", "sql", "shell", "powershell",
+        "ruby", "php", "c", "cpp", "text"
+    };
+
     private readonly Lazy<Task<IJSObjectReference>> _moduleTask;
     private DotNetObjectReference<MonacoEditorInterop>? _dotNetRef;
 
@@ -26,8 +34,9 @@ public class MonacoEditorInterop : IAsyncDisposable
 
     public async Task CreateEditorAsync(string elementId, string initialValue = "", string language = "plaintext", bool readOnly = false)
     {
+        var safeLanguage = AllowedLanguages.Contains(language) ? language : "plaintext";
         var module = await _moduleTask.Value;
-        await module.InvokeAsync<bool>("createEditor", elementId, initialValue, language, readOnly);
+        await module.InvokeAsync<bool>("createEditor", elementId, initialValue, safeLanguage, readOnly);
     }
 
     public async Task<string> GetValueAsync(string elementId)
@@ -44,8 +53,9 @@ public class MonacoEditorInterop : IAsyncDisposable
 
     public async Task SetLanguageAsync(string elementId, string language)
     {
+        var safeLanguage = AllowedLanguages.Contains(language) ? language : "plaintext";
         var module = await _moduleTask.Value;
-        await module.InvokeVoidAsync("setLanguage", elementId, language);
+        await module.InvokeVoidAsync("setLanguage", elementId, safeLanguage);
     }
 
     public async Task SetReadOnlyAsync(string elementId, bool readOnly)
