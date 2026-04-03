@@ -1,0 +1,28 @@
+@inject RegexState State
+
+<div class="rk-explanation-panel">
+    @if (State.Explanation.Count == 0)
+    {
+        <div class="rk-match-empty">Enter a pattern to see its explanation.</div>
+    }
+    else
+    {
+        <table class="rk-explanation-table">
+            <thead>
+                <tr>
+                    <th>Token</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var part in State.Explanation)
+                {
+                    <tr>
+                        <td><code class="rk-explanation-token">@part.Token</code></td>
+                        <td class="rk-explanation-desc">@part.Description</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
