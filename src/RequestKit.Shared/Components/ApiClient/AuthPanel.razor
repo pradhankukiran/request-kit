@@ -1,0 +1,83 @@
+<div class="rk-auth-panel">
+    <div class="rk-field">
+        <label class="rk-label">Auth Type</label>
+        <select class="rk-select" value="@Auth.Type" @onchange="OnTypeChange">
+            @foreach (var t in Enum.GetValues<AuthType>())
+            {
+                <option value="@t">@FormatAuthType(t)</option>
+            }
+        </select>
+    </div>
+
+    @switch (Auth.Type)
+    {
+        case AuthType.BearerToken:
+            <div class="rk-field">
+                <label class="rk-label">Token</label>
+                <input type="text" class="rk-input" value="@Auth.Token"
+                       @oninput="e => Update(Auth with { Token = e.Value?.ToString() ?? string.Empty })" placeholder="Enter bearer token" />
+            </div>
+            break;
+        case AuthType.BasicAuth:
+            <div class="rk-field">
+                <label class="rk-label">Username</label>
+                <input type="text" class="rk-input" value="@Auth.Username"
+                       @oninput="e => Update(Auth with { Username = e.Value?.ToString() ?? string.Empty })" />
+            </div>
+            <div class="rk-field">
+                <label class="rk-label">Password</label>
+                <input type="password" class="rk-input" value="@Auth.Password"
+                       @oninput="e => Update(Auth with { Password = e.Value?.ToString() ?? string.Empty })" />
+            </div>
+            break;
+        case AuthType.ApiKeyHeader:
+        case AuthType.ApiKeyQueryParam:
+            <div class="rk-field">
+                <label class="rk-label">Key Name</label>
+                <input type="text" class="rk-input" value="@Auth.ApiKeyName"
+                       @oninput="e => Update(Auth with { ApiKeyName = e.Value?.ToString() ?? string.Empty })" placeholder="X-Api-Key" />
+            </div>
+            <div class="rk-field">
+                <label class="rk-label">Key Value</label>
+                <input type="text" class="rk-input" value="@Auth.ApiKeyValue"
+                       @oninput="e => Update(Auth with { ApiKeyValue = e.Value?.ToString() ?? string.Empty })" />
+            </div>
+            break;
+        case AuthType.CustomHeader:
+            <div class="rk-field">
+                <label class="rk-label">Header Name</label>
+                <input type="text" class="rk-input" value="@Auth.CustomHeaderName"
+                       @oninput="e => Update(Auth with { CustomHeaderName = e.Value?.ToString() ?? string.Empty })" />
+            </div>
+            <div class="rk-field">
+                <label class="rk-label">Header Value</label>
+                <input type="text" class="rk-input" value="@Auth.CustomHeaderValue"
+                       @oninput="e => Update(Auth with { CustomHeaderValue = e.Value?.ToString() ?? string.Empty })" />
+            </div>
+            break;
+    }
+</div>
+
+@code {
+    [Parameter] public AuthConfig Auth { get; set; } = new();
+    [Parameter] public EventCallback<AuthConfig> OnChanged { get; set; }
+
+    private void OnTypeChange(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<AuthType>(e.Value?.ToString(), out var type))
+            OnChanged.InvokeAsync(Auth with { Type = type });
+    }
+
+    private void Update(AuthConfig auth) => OnChanged.InvokeAsync(auth);
+
+    private static string FormatAuthType(AuthType t) => t switch
+    {
+        AuthType.None => "No Auth",
+        AuthType.BearerToken => "Bearer Token",
+        AuthType.BasicAuth => "Basic Auth",
+        AuthType.ApiKeyHeader => "API Key (Header)",
+        AuthType.ApiKeyQueryParam => "API Key (Query)",
+        AuthType.CustomHeader => "Custom Header",
+        _ => t.ToString()
+    };
+}
