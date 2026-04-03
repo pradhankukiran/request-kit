@@ -614,6 +614,235 @@ body {
     margin-left: auto;
 }
 
+/* --- Diff Viewer --- */
+.rk-diff-workbench {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--rk-white);
+}
+.rk-diff-inputs {
+    display: flex;
+    gap: 1px;
+    background: var(--rk-border);
+    flex-shrink: 0;
+    max-height: 40%;
+}
+.rk-diff-input-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--rk-white);
+}
+.rk-diff-input-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px 4px;
+}
+.rk-diff-textarea {
+    flex: 1;
+    min-height: 120px;
+    max-height: 280px;
+    resize: vertical;
+    margin: 0 12px 8px;
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+    line-height: 1.5;
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius-md);
+    padding: 8px 10px;
+    color: var(--rk-text);
+    background: var(--rk-white);
+    tab-size: 4;
+}
+.rk-diff-textarea:focus {
+    outline: none;
+    border-color: var(--rk-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* --- Diff Controls --- */
+.rk-diff-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-top: 1px solid var(--rk-border);
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+    flex-shrink: 0;
+    gap: 12px;
+}
+.rk-diff-controls-left, .rk-diff-controls-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.rk-diff-view-toggle {
+    display: flex;
+    gap: 0;
+    background: var(--rk-white);
+    border: 1px solid var(--rk-border);
+    border-radius: var(--rk-radius-md);
+    overflow: hidden;
+}
+.rk-diff-view-toggle .rk-btn-sm {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+.rk-diff-view-toggle .rk-btn-sm + .rk-btn-sm {
+    border-left: 1px solid var(--rk-border);
+}
+
+/* --- Diff Stats --- */
+.rk-diff-stats {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.rk-diff-stat-added { color: var(--rk-success); }
+.rk-diff-stat-removed { color: var(--rk-error); }
+.rk-diff-stat-modified { color: var(--rk-warning); }
+.rk-diff-stat-unchanged { color: var(--rk-text-muted); }
+
+/* --- Diff Output --- */
+.rk-diff-output {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+}
+.rk-diff-view {
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+}
+
+/* --- Side-by-Side View --- */
+.rk-diff-sbs-header {
+    display: flex;
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.rk-diff-sbs-col-header {
+    flex: 1;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rk-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-family: var(--rk-font-sans);
+}
+.rk-diff-sbs-col-header + .rk-diff-sbs-col-header {
+    border-left: 1px solid var(--rk-border);
+}
+.rk-diff-sbs-row {
+    display: flex;
+    border-bottom: 1px solid var(--rk-surface);
+}
+.rk-diff-sbs-cell {
+    flex: 1;
+    display: flex;
+    padding: 0 8px;
+    min-width: 0;
+    white-space: pre;
+    overflow-x: auto;
+}
+.rk-diff-sbs-cell + .rk-diff-sbs-cell {
+    border-left: 1px solid var(--rk-border);
+}
+
+/* --- Unified View --- */
+.rk-diff-unified-header {
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--rk-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-family: var(--rk-font-sans);
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-surface);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.rk-diff-unified-line {
+    display: flex;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--rk-surface);
+    white-space: pre;
+}
+
+/* --- Shared Diff Line Styles --- */
+.rk-diff-line-num {
+    display: inline-block;
+    min-width: 36px;
+    padding: 0 6px;
+    text-align: right;
+    color: var(--rk-text-muted);
+    user-select: none;
+    flex-shrink: 0;
+    font-size: 11px;
+}
+.rk-diff-line-prefix {
+    display: inline-block;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+    user-select: none;
+    font-weight: 700;
+}
+.rk-diff-line-text {
+    flex: 1;
+    min-width: 0;
+}
+
+/* --- Diff Line Colors --- */
+.rk-diff-added {
+    background: #F0FDF4;
+}
+.rk-diff-added .rk-diff-line-prefix { color: var(--rk-success); }
+.rk-diff-removed {
+    background: #FEF2F2;
+}
+.rk-diff-removed .rk-diff-line-prefix { color: var(--rk-error); }
+.rk-diff-modified-left {
+    background: #FEF2F2;
+}
+.rk-diff-modified-left .rk-diff-line-prefix { color: var(--rk-error); }
+.rk-diff-modified-right {
+    background: #F0FDF4;
+}
+.rk-diff-modified-right .rk-diff-line-prefix { color: var(--rk-success); }
+.rk-diff-unchanged {
+    background: var(--rk-white);
+}
+
+/* --- Inline Change Highlights --- */
+mark.rk-diff-inline-removed {
+    background: #FECACA;
+    color: var(--rk-error);
+    border-radius: 2px;
+    padding: 0 1px;
+}
+mark.rk-diff-inline-added {
+    background: #BBF7D0;
+    color: #166534;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
 /* --- Blazor Error UI --- */
 #blazor-error-ui {
     display: none; position: fixed; bottom: 0; left: 0; right: 0;
