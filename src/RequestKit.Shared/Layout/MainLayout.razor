@@ -32,7 +32,7 @@
                 case "Ctrl+3": App.SetMode(ToolMode.DiffViewer); break;
             }
         }
-        catch { }
+        catch (Exception ex) { Console.Error.WriteLine($"Shortcut handling failed: {ex.Message}"); }
     }
 
     public void Dispose() => Keyboard.OnShortcut -= HandleShortcut;
