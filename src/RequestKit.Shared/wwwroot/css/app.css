@@ -132,7 +132,7 @@ body {
 }
 .rk-input:focus, .rk-select:focus, .rk-textarea:focus {
     outline: none; border-color: var(--rk-primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 0 0 2px rgba(99, 102, 241, 0.3);
 }
 .rk-input::placeholder, .rk-textarea::placeholder { color: var(--rk-text-muted); }
 .rk-textarea { resize: vertical; min-height: 80px; font-family: var(--rk-font-mono); font-size: 12px; }
@@ -181,7 +181,7 @@ body {
     font-size: 12px; font-family: var(--rk-font-mono); background: transparent;
     color: var(--rk-text); transition: border-color 0.15s;
 }
-.rk-kv-key:focus, .rk-kv-value:focus { border-color: var(--rk-primary); outline: none; }
+.rk-kv-key:focus, .rk-kv-value:focus { border-color: var(--rk-primary); outline: none; box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3); }
 .rk-kv-key::placeholder, .rk-kv-value::placeholder { color: var(--rk-text-muted); }
 .rk-kv-toggle { width: 16px; height: 16px; accent-color: var(--rk-primary); cursor: pointer; }
 .rk-kv-delete {
@@ -213,6 +213,8 @@ body {
     display: flex; align-items: center; gap: 6px; padding: 6px 8px;
     border-radius: var(--rk-radius-sm); cursor: pointer; font-size: 12px;
     transition: background 0.1s; user-select: none;
+    border: none; background: transparent; text-align: left; width: 100%;
+    font-family: inherit; color: inherit;
 }
 .rk-tree-item:hover { background: var(--rk-white); }
 .rk-tree-item.active { background: var(--rk-primary-light); color: var(--rk-primary); }
@@ -222,8 +224,10 @@ body {
 /* --- History Panel --- */
 .rk-history-item {
     display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-    border-bottom: 1px solid var(--rk-surface); cursor: pointer;
+    border: none; border-bottom: 1px solid var(--rk-surface); cursor: pointer;
     font-size: 12px; transition: background 0.1s;
+    background: transparent; text-align: left; width: 100%;
+    font-family: inherit; color: inherit;
 }
 .rk-history-item:hover { background: var(--rk-surface); }
 .rk-history-item .rk-method { flex-shrink: 0; }
@@ -446,7 +450,7 @@ body {
     padding: 7px 10px;
     color: var(--rk-text);
 }
-.rk-url-input:focus { outline: none; }
+.rk-url-input:focus { outline: 2px solid var(--rk-primary); outline-offset: -2px; }
 .rk-send-btn {
     border: none;
     border-left: 1px solid var(--rk-border);
@@ -664,7 +668,7 @@ body {
 .rk-diff-textarea:focus {
     outline: none;
     border-color: var(--rk-primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 0 0 2px rgba(99, 102, 241, 0.3);
 }
 
 /* --- Diff Controls --- */

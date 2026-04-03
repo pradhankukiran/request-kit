@@ -13,7 +13,7 @@
         <div class="rk-history-list">
             @foreach (var entry in ApiState.History)
             {
-                <div class="rk-history-item" @key="entry.Id" @onclick="() => LoadHistoryEntry(entry)">
+                <button type="button" class="rk-history-item" @key="entry.Id" @onclick="() => LoadHistoryEntry(entry)">
                     <span class="rk-method rk-method-@entry.Method.ToString().ToLower()">@entry.Method</span>
                     <div class="rk-history-details">
                         <span class="rk-history-url" title="@entry.Url">@TruncateUrl(entry.Url)</span>
@@ -23,7 +23,7 @@
                             <span class="rk-history-timestamp">@FormatTimestamp(entry.Timestamp)</span>
                         </div>
                     </div>
-                </div>
+                </button>
             }
         </div>
     }
