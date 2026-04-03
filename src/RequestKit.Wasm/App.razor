@@ -1,9 +1,20 @@
 @using RequestKit.Shared.Layout
 
-<Router AppAssembly="@typeof(RequestKit.Shared.Pages.Home).Assembly"
-        AdditionalAssemblies="new[] { typeof(App).Assembly }">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+<ErrorBoundary>
+    <ChildContent>
+        <Router AppAssembly="@typeof(RequestKit.Shared.Pages.Home).Assembly"
+                AdditionalAssemblies="new[] { typeof(App).Assembly }">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+        </Router>
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div style="padding:40px;text-align:center;font-family:Inter,sans-serif;">
+            <div style="font-size:18px;font-weight:600;color:#DC2626;margin-bottom:8px;">Something went wrong</div>
+            <div style="font-size:13px;color:#64748B;margin-bottom:16px;">@ex.Message</div>
+            <a href="/" style="color:#2563EB;">Go Home</a>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
