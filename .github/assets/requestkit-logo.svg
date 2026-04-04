@@ -1,0 +1,11 @@
+<svg width="760" height="180" viewBox="0 0 760 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="760" height="180" rx="24" fill="#F8FAFC"/>
+  <rect x="32" y="32" width="116" height="116" fill="#2563EB"/>
+  <rect x="176" y="50" width="220" height="18" rx="9" fill="#DBEAFE"/>
+  <text x="176" y="112" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="58" font-weight="800" letter-spacing="-1.5">RequestKit</text>
+  <text x="176" y="144" fill="#475569" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="500">Local-first API client, regex workbench, and diff viewer</text>
+  <rect x="620" y="44" width="108" height="30" rx="15" fill="#E2E8F0"/>
+  <text x="674" y="64" text-anchor="middle" fill="#0F172A" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Blazor WASM</text>
+  <rect x="620" y="84" width="108" height="30" rx="15" fill="#DBEAFE"/>
+  <text x="674" y="104" text-anchor="middle" fill="#1D4ED8" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Local-first</text>
+</svg>
