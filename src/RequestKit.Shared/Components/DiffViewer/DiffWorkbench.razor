@@ -1,36 +1,94 @@
+@using System.Text.Json
+@inject ApiClientState ApiState
 @inject DiffState Diff
 @inject AppState App
 @implements IDisposable
 
 <div class="rk-diff-workbench">
+    <div class="rk-diff-hero">
+        <div class="rk-diff-hero-copy">
+            <span class="rk-diff-kicker">Diff Viewer</span>
+            <h2 class="rk-diff-hero-title">Compare text, payloads, and config changes without leaving the workbench.</h2>
+            <p class="rk-diff-hero-text">
+                Paste two versions, load a sample, or bring in the latest API response. RequestKit highlights added, removed,
+                and modified lines, then drills down to inline changes automatically after a short pause.
+            </p>
+        </div>
+        <div class="rk-diff-hero-right">
+            <div class="rk-diff-hero-actions">
+                <button class="rk-btn rk-btn-primary" @onclick='() => LoadExample(DiffExample.JsonPayload)'>Try JSON Example</button>
+                <button class="rk-btn rk-btn-sm" @onclick='() => LoadExample(DiffExample.ConfigFile)'>Config Sample</button>
+                <button class="rk-btn rk-btn-sm" @onclick='() => LoadExample(DiffExample.ReleaseNotes)'>Release Notes</button>
+                @if (App.LastResponseBody is not null)
+                {
+                    <button class="rk-btn rk-btn-sm" @onclick='() => LoadLastResponse(DiffPane.Right, false)'>Use Last Response</button>
+                }
+            </div>
+
+            <div class="rk-diff-hero-stats">
+                <div class="rk-diff-hero-stat">
+                    <span class="rk-diff-hero-stat-label">Workspace</span>
+                    <strong>@ApiState.CurrentWorkspaceName</strong>
+                    <span class="rk-diff-hero-stat-meta">@WorkspaceSummary</span>
+                </div>
+                <div class="rk-diff-hero-stat">
+                    <span class="rk-diff-hero-stat-label">Environment</span>
+                    <strong>@ActiveEnvironmentName</strong>
+                    <span class="rk-diff-hero-stat-meta">@EnvironmentSummary</span>
+                </div>
+                <div class="rk-diff-hero-stat">
+                    <span class="rk-diff-hero-stat-label">Latest Response</span>
+                    <strong>@LatestResponseHeadline</strong>
+                    <span class="rk-diff-hero-stat-meta">@LatestResponseMeta</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="rk-diff-inputs">
         <div class="rk-diff-input-col">
             <div class="rk-diff-input-header">
-                <label class="rk-label">Original</label>
-                @if (App.LastResponseBody is not null)
-                {
-                    <button class="rk-btn rk-btn-sm" @onclick="PipeToLeft" title="Load last API response">Pipe Response</button>
-                }
+                <div>
+                    <label class="rk-label">Original</label>
+                    <div class="rk-diff-input-meta">@GetTextSummary(_leftText)</div>
+                </div>
+                <div class="rk-diff-input-actions">
+                    @if (App.LastResponseBody is not null)
+                    {
+                        <button class="rk-btn rk-btn-sm" @onclick='() => LoadLastResponse(DiffPane.Left, false)' title="Load last API response">Pipe Response</button>
+                    }
+                    <button class="rk-btn rk-btn-sm" @onclick='() => TryFormatJson(DiffPane.Left)' disabled="@string.IsNullOrWhiteSpace(_leftText)">Pretty JSON</button>
+                    <button class="rk-btn rk-btn-sm" @onclick='() => ClearSide(DiffPane.Left)' disabled="@string.IsNullOrWhiteSpace(_leftText)">Clear</button>
+                </div>
             </div>
             <textarea class="rk-textarea rk-diff-textarea"
-                      placeholder="Paste original text here..."
+                      placeholder="Paste the original version, baseline, or before-state here..."
                       @bind="_leftText"
                       @bind:event="oninput"
                       @bind:after="OnTextChanged"></textarea>
+            <div class="rk-diff-input-footer">Use this side for the baseline you want to compare against.</div>
         </div>
         <div class="rk-diff-input-col">
             <div class="rk-diff-input-header">
-                <label class="rk-label">Modified</label>
-                @if (App.LastResponseBody is not null)
-                {
-                    <button class="rk-btn rk-btn-sm" @onclick="PipeToRight" title="Load last API response">Pipe Response</button>
-                }
+                <div>
+                    <label class="rk-label">Modified</label>
+                    <div class="rk-diff-input-meta">@GetTextSummary(_rightText)</div>
+                </div>
+                <div class="rk-diff-input-actions">
+                    @if (App.LastResponseBody is not null)
+                    {
+                        <button class="rk-btn rk-btn-sm" @onclick='() => LoadLastResponse(DiffPane.Right, false)' title="Load last API response">Pipe Response</button>
+                    }
+                    <button class="rk-btn rk-btn-sm" @onclick='() => TryFormatJson(DiffPane.Right)' disabled="@string.IsNullOrWhiteSpace(_rightText)">Pretty JSON</button>
+                    <button class="rk-btn rk-btn-sm" @onclick='() => ClearSide(DiffPane.Right)' disabled="@string.IsNullOrWhiteSpace(_rightText)">Clear</button>
+                </div>
             </div>
             <textarea class="rk-textarea rk-diff-textarea"
-                      placeholder="Paste modified text here..."
+                      placeholder="Paste the updated version, after-state, or candidate output here..."
                       @bind="_rightText"
                       @bind:event="oninput"
                       @bind:after="OnTextChanged"></textarea>
+            <div class="rk-diff-input-footer">Use this side for the new version you want to inspect.</div>
         </div>
     </div>
 
@@ -39,6 +97,10 @@
             <button class="rk-btn rk-btn-primary" @onclick="RunDiff">Compare</button>
             <button class="rk-btn rk-btn-sm" @onclick="SwapTexts" title="Swap left and right">Swap</button>
             <button class="rk-btn rk-btn-sm" @onclick="ClearAll">Clear</button>
+        </div>
+        <div class="rk-diff-controls-center">
+            <span class="rk-diff-live-pill">Live compare after 500ms pause</span>
+            <span class="rk-diff-live-note">@GetToolbarMessage()</span>
         </div>
         <div class="rk-diff-controls-right">
             <div class="rk-diff-view-toggle">
@@ -51,39 +113,118 @@
         </div>
     </div>
 
-    <div class="rk-diff-output">
-        @if (Diff.Result is not null && Diff.Result.Lines.Count > 0)
-        {
-            @if (Diff.ViewMode == DiffViewMode.SideBySide)
+    <div class="rk-diff-output-shell">
+        <div class="rk-diff-output-header">
+            <div>
+                <span class="rk-diff-output-kicker">Comparison</span>
+                <h3 class="rk-diff-output-title">@GetOutputTitle()</h3>
+            </div>
+            <div class="rk-diff-output-summary">
+                <span class="rk-diff-output-mode">@GetViewModeLabel()</span>
+                <span>@GetOutputSummary()</span>
+            </div>
+        </div>
+
+        <div class="rk-diff-output">
+            @if (Diff.Result is not null && Diff.Result.Lines.Count > 0)
             {
-                <SideBySideDiffView Lines="@Diff.Result.Lines" />
+                @if (Diff.ViewMode == DiffViewMode.SideBySide)
+                {
+                    <SideBySideDiffView Lines="@Diff.Result.Lines" />
+                }
+                else
+                {
+                    <UnifiedDiffView Lines="@Diff.Result.Lines" />
+                }
+            }
+            else if (_hasCompared)
+            {
+                <div class="rk-diff-empty-state rk-diff-empty-state-match">
+                    <span class="rk-diff-empty-badge">Match</span>
+                    <h4 class="rk-diff-empty-title">No differences found.</h4>
+                    <p class="rk-diff-empty-text">Both sides resolve to the same content. Load a sample or swap versions if you want to test another change.</p>
+                    <div class="rk-diff-empty-actions">
+                        <button class="rk-btn rk-btn-sm" @onclick='() => LoadExample(DiffExample.JsonPayload)'>Load Example</button>
+                        <button class="rk-btn rk-btn-sm" @onclick="SwapTexts">Swap Sides</button>
+                    </div>
+                </div>
             }
             else
             {
-                <UnifiedDiffView Lines="@Diff.Result.Lines" />
+                <div class="rk-diff-empty-state rk-diff-empty-state-starter">
+                    <div class="rk-diff-empty-copy">
+                        <span class="rk-diff-empty-kicker">Quick Start</span>
+                        <h4 class="rk-diff-empty-title">Start with two versions or load a realistic sample.</h4>
+                        <p class="rk-diff-empty-text">The result pane stays live while you type and highlights line-level plus inline edits for text, JSON, config files, and docs.</p>
+                    </div>
+                    <div class="rk-diff-starter-grid">
+                        <button class="rk-diff-starter-card" @onclick='() => LoadExample(DiffExample.JsonPayload)'>
+                            <span class="rk-diff-starter-icon rk-diff-starter-icon-json">JSON</span>
+                            <span class="rk-diff-starter-title">JSON payload</span>
+                            <span class="rk-diff-starter-text">Inspect value changes, added keys, and nested field edits.</span>
+                        </button>
+                        <button class="rk-diff-starter-card" @onclick='() => LoadExample(DiffExample.ConfigFile)'>
+                            <span class="rk-diff-starter-icon rk-diff-starter-icon-config">ENV</span>
+                            <span class="rk-diff-starter-title">Config file</span>
+                            <span class="rk-diff-starter-text">Compare environment flags, endpoints, and timeout settings.</span>
+                        </button>
+                        <button class="rk-diff-starter-card" @onclick='() => LoadExample(DiffExample.ReleaseNotes)'>
+                            <span class="rk-diff-starter-icon rk-diff-starter-icon-doc">MD</span>
+                            <span class="rk-diff-starter-title">Release notes</span>
+                            <span class="rk-diff-starter-text">Review edited copy and inline wording updates side by side.</span>
+                        </button>
+                        @if (App.LastResponseBody is not null)
+                        {
+                            <button class="rk-diff-starter-card" @onclick='() => LoadLastResponse(DiffPane.Right, false)'>
+                                <span class="rk-diff-starter-icon rk-diff-starter-icon-response">API</span>
+                                <span class="rk-diff-starter-title">Use last response</span>
+                                <span class="rk-diff-starter-text">Drop the latest API response into the modified pane and compare it with your baseline.</span>
+                            </button>
+                        }
+                    </div>
+                </div>
             }
-        }
-        else if (_hasCompared)
-        {
-            <div class="rk-empty-state">
-                <span>No differences found. The texts are identical.</span>
-            </div>
-        }
-        else
-        {
-            <div class="rk-empty-state">
-                <span>Paste text on both sides and click Compare to see differences.</span>
-            </div>
-        }
+        </div>
     </div>
 </div>
 
 @code {
+    private enum DiffPane
+    {
+        Left,
+        Right
+    }
+
+    private enum DiffExample
+    {
+        JsonPayload,
+        ConfigFile,
+        ReleaseNotes
+    }
+
+    private static readonly JsonSerializerOptions PrettyJsonOptions = new()
+    {
+        WriteIndented = true
+    };
+
     private string _leftText = "";
     private string _rightText = "";
     private bool _hasCompared;
     private CancellationTokenSource? _debounceCts;
     private const int DebounceDelayMs = 500;
+    private string ActiveEnvironmentName => ApiState.ActiveEnvironment?.Name ?? "Default";
+    private string WorkspaceSummary => $"{ApiState.Collections.Count} {Pluralize("collection", ApiState.Collections.Count)} • {ApiState.Requests.Count} {Pluralize("request", ApiState.Requests.Count)} • {ApiState.History.Count} history entries";
+    private string EnvironmentSummary => $"{(ApiState.CorsProxy.Enabled ? "External proxy" : "Browser direct mode")} • {ApiState.Settings.TimeoutSeconds}s timeout";
+    private string LatestResponseHeadline => ApiState.IsLoading
+        ? "Request in flight"
+        : ApiState.ActiveResponse is null
+            ? "No response yet"
+            : ApiState.ActiveResponse.StatusCode.ToString();
+    private string LatestResponseMeta => ApiState.IsLoading
+        ? "Inspect status, headers, and body when the request completes."
+        : ApiState.ActiveResponse is null
+            ? "Send a request to populate response timing, size, and content type."
+            : $"{ApiState.ActiveResponse.ResponseTimeMs:F0} ms • {FormatSize(ApiState.ActiveResponse.ResponseSizeBytes)} • {ApiState.ActiveResponse.DetectedContentType}";
 
     protected override void OnInitialized()
     {
@@ -106,7 +247,7 @@
         StateHasChanged();
     }
 
-    private async void OnTextChanged()
+    private async Task OnTextChanged()
     {
         Diff.SetLeftText(_leftText);
         Diff.SetRightText(_rightText);
@@ -163,23 +304,264 @@
         Diff.SetResult(new DiffResult());
     }
 
-    private void PipeToLeft()
+    private void ClearSide(DiffPane pane)
     {
-        if (App.LastResponseBody is not null)
+        if (pane == DiffPane.Left)
         {
-            _leftText = App.LastResponseBody;
+            _leftText = "";
             Diff.SetLeftText(_leftText);
-            if (_hasCompared) RunDiff();
+        }
+        else
+        {
+            _rightText = "";
+            Diff.SetRightText(_rightText);
+        }
+
+        if (string.IsNullOrWhiteSpace(_leftText) && string.IsNullOrWhiteSpace(_rightText))
+        {
+            _hasCompared = false;
+            Diff.SetResult(new DiffResult());
+        }
+        else if (_hasCompared)
+        {
+            RunDiff();
         }
     }
 
-    private void PipeToRight()
+    private void LoadLastResponse(DiffPane pane, bool compareNow)
     {
         if (App.LastResponseBody is not null)
         {
-            _rightText = App.LastResponseBody;
-            Diff.SetRightText(_rightText);
-            if (_hasCompared) RunDiff();
+            if (pane == DiffPane.Left)
+            {
+                _leftText = App.LastResponseBody;
+                Diff.SetLeftText(_leftText);
+            }
+            else
+            {
+                _rightText = App.LastResponseBody;
+                Diff.SetRightText(_rightText);
+            }
+
+            if (compareNow || _hasCompared || (!string.IsNullOrWhiteSpace(_leftText) && !string.IsNullOrWhiteSpace(_rightText)))
+            {
+                RunDiff();
+            }
         }
+    }
+
+    private void TryFormatJson(DiffPane pane)
+    {
+        var input = pane == DiffPane.Left ? _leftText : _rightText;
+        if (!TryPrettifyJson(input, out var formatted))
+        {
+            return;
+        }
+
+        if (pane == DiffPane.Left)
+        {
+            _leftText = formatted;
+            Diff.SetLeftText(_leftText);
+        }
+        else
+        {
+            _rightText = formatted;
+            Diff.SetRightText(_rightText);
+        }
+
+        if (_hasCompared || (!string.IsNullOrWhiteSpace(_leftText) && !string.IsNullOrWhiteSpace(_rightText)))
+        {
+            RunDiff();
+        }
+    }
+
+    private void LoadExample(DiffExample example)
+    {
+        var (left, right) = example switch
+        {
+            DiffExample.JsonPayload => (
+                """
+                {
+                  "service": "requestkit",
+                  "timeoutMs": 5000,
+                  "retry": {
+                    "count": 2,
+                    "backoff": "linear"
+                  },
+                  "features": [
+                    "history",
+                    "regex",
+                    "diff"
+                  ]
+                }
+                """,
+                """
+                {
+                  "service": "requestkit",
+                  "timeoutMs": 8000,
+                  "retry": {
+                    "count": 3,
+                    "backoff": "exponential"
+                  },
+                  "features": [
+                    "history",
+                    "regex",
+                    "diff",
+                    "collections"
+                  ],
+                  "telemetry": {
+                    "enabled": false
+                  }
+                }
+                """
+            ),
+            DiffExample.ConfigFile => (
+                """
+                APP_ENV=staging
+                API_BASE_URL=https://staging.api.requestkit.dev
+                FEATURE_REGEX=true
+                FEATURE_DIFF=true
+                FEATURE_HISTORY=false
+                TIMEOUT_MS=5000
+                """,
+                """
+                APP_ENV=production
+                API_BASE_URL=https://api.requestkit.dev
+                FEATURE_REGEX=true
+                FEATURE_DIFF=true
+                FEATURE_HISTORY=true
+                FEATURE_WORKSPACES=true
+                TIMEOUT_MS=8000
+                """
+            ),
+            DiffExample.ReleaseNotes => (
+                """
+                ## RequestKit 0.8.0
+
+                - Added autosave for workspaces
+                - Improved request history restore flow
+                - Refined response formatting for JSON payloads
+                """,
+                """
+                ## RequestKit 0.9.0
+
+                - Added autosave and explicit save status for workspaces
+                - Improved request history restore and duplicate flows
+                - Expanded response inspection with raw, pretty, and preview modes
+                - Refined the home page onboarding experience
+                """
+            ),
+            _ => ("", "")
+        };
+
+        _leftText = left;
+        _rightText = right;
+        Diff.SetLeftText(_leftText);
+        Diff.SetRightText(_rightText);
+        RunDiff();
+    }
+
+    private string GetTextSummary(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return "Empty pane";
+        }
+
+        var lineCount = CountLines(text);
+        return $"{lineCount} line{(lineCount == 1 ? "" : "s")} • {text.Length} chars";
+    }
+
+    private string GetToolbarMessage()
+    {
+        if (string.IsNullOrWhiteSpace(_leftText) && string.IsNullOrWhiteSpace(_rightText))
+        {
+            return "Load a sample or start pasting to see the diff here.";
+        }
+
+        if (string.IsNullOrWhiteSpace(_leftText) || string.IsNullOrWhiteSpace(_rightText))
+        {
+            return "Single-sided input still shows additions and removals against an empty baseline.";
+        }
+
+        return "Use side-by-side to inspect structure, or unified to copy patch-style output.";
+    }
+
+    private string GetOutputTitle()
+    {
+        if (Diff.Result is not null && Diff.Result.Lines.Count > 0)
+        {
+            return Diff.ViewMode == DiffViewMode.SideBySide
+                ? "Side-by-side comparison"
+                : "Unified comparison";
+        }
+
+        if (_hasCompared)
+        {
+            return "Inputs match exactly";
+        }
+
+        return "Ready for comparison";
+    }
+
+    private string GetOutputSummary()
+    {
+        if (Diff.Result is not null && Diff.Result.Lines.Count > 0)
+        {
+            var changed = Diff.Result.LinesAdded + Diff.Result.LinesRemoved + Diff.Result.LinesModified;
+            return $"{changed} changed row{(changed == 1 ? "" : "s")} across {Diff.Result.Lines.Count} rendered line{(Diff.Result.Lines.Count == 1 ? "" : "s")}.";
+        }
+
+        if (_hasCompared)
+        {
+            return $"{CountLines(_leftText)} line{(CountLines(_leftText) == 1 ? "" : "s")} matched with no detected differences.";
+        }
+
+        return "Paste two versions, use a sample, or pull in the latest API response to start.";
+    }
+
+    private string GetViewModeLabel() => Diff.ViewMode == DiffViewMode.SideBySide ? "Side by Side" : "Unified";
+
+    private static int CountLines(string text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return 0;
+        }
+
+        var count = 1;
+        foreach (var character in text)
+        {
+            if (character == '\n')
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static bool TryPrettifyJson(string text, out string formatted)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(text);
+            formatted = JsonSerializer.Serialize(document.RootElement, PrettyJsonOptions);
+            return true;
+        }
+        catch
+        {
+            formatted = text;
+            return false;
+        }
+    }
+
+    private static string Pluralize(string singular, int count) => count == 1 ? singular : $"{singular}s";
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 }

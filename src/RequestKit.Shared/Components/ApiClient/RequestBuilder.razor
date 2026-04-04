@@ -5,167 +5,245 @@
 @implements IDisposable
 
 <div class="rk-api-client-layout">
-    @if (_sidebarOpen)
-    {
-        <div class="rk-api-sidebar">
-            <div class="rk-sidebar-tab-bar">
-                <button class="rk-sidebar-tab @SidebarTabClass("collections")" @onclick="@(() => SetSidebarTab("collections"))">Collections</button>
-                <button class="rk-sidebar-tab @SidebarTabClass("history")" @onclick="@(() => SetSidebarTab("history"))">History</button>
+    <div class="rk-api-shell">
+        <div class="rk-api-shell-hero">
+            <div class="rk-api-shell-copy">
+                <span class="rk-api-shell-kicker">API Client</span>
+                <h2 class="rk-api-shell-title">Send requests, inspect responses, and branch payloads into the rest of the workbench.</h2>
+                <p class="rk-api-shell-text">
+                    Build calls with params, headers, auth, body editors, and environments, then inspect the result in raw,
+                    pretty, preview, regex, or diff flows without leaving the page.
+                </p>
             </div>
-            <div class="rk-sidebar-content">
-                @if (_sidebarTab == "collections")
-                {
-                    <CollectionsSidebar />
-                }
-                else
-                {
-                    <HistoryPanel />
-                }
-            </div>
-        </div>
-    }
-
-    <div class="rk-api-client">
-        <div class="rk-request-section">
-            <div class="rk-request-toolbar">
-                <button class="rk-btn-icon rk-sidebar-toggle" @onclick="ToggleSidebar" title="@(_sidebarOpen ? "Hide sidebar" : "Show sidebar")">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <rect x="1" y="2" width="14" height="12" rx="1.5" />
-                        <line x1="5.5" y1="2" x2="5.5" y2="14" />
-                    </svg>
-                </button>
-                <input class="rk-input rk-request-name-input"
-                       type="text"
-                       value="@ApiState.ActiveRequest.Name"
-                       @oninput="e => UpdateName(e.Value?.ToString() ?? string.Empty)"
-                       placeholder="Request name" />
-                <div class="rk-request-toolbar-actions">
+            <div class="rk-api-shell-right">
+                <div class="rk-api-shell-actions">
+                    <button class="rk-btn rk-btn-primary" @onclick="CreateBlankRequest">New Request</button>
+                    <button class="rk-btn rk-btn-sm" @onclick="LoadExampleRequest">Load Example</button>
                     <button class="rk-btn rk-btn-sm" @onclick="OpenCurlImport">Import cURL</button>
-                    <button class="rk-btn rk-btn-sm" @onclick="OpenCurlExport" disabled="@(!CanExportCurl)">Export cURL</button>
+                    <button class="rk-btn rk-btn-sm" @onclick="OpenSettings">Open Settings</button>
+                </div>
+                <div class="rk-api-shell-stats">
+                    <div class="rk-api-shell-stat">
+                        <span class="rk-api-shell-stat-label">Workspace</span>
+                        <strong>@ApiState.CurrentWorkspaceName</strong>
+                        <span class="rk-api-shell-stat-meta">@WorkspaceSummary</span>
+                    </div>
+                    <div class="rk-api-shell-stat">
+                        <span class="rk-api-shell-stat-label">Environment</span>
+                        <strong>@ActiveEnvironmentName</strong>
+                        <span class="rk-api-shell-stat-meta">@EnvironmentSummary</span>
+                    </div>
+                    <div class="rk-api-shell-stat">
+                        <span class="rk-api-shell-stat-label">Latest Response</span>
+                        <strong>@LatestResponseHeadline</strong>
+                        <span class="rk-api-shell-stat-meta">@LatestResponseMeta</span>
+                    </div>
                 </div>
             </div>
+        </div>
 
-            <UrlBar Method="@ApiState.ActiveRequest.Method"
-                    Url="@ApiState.ActiveRequest.Url"
-                    IsLoading="@ApiState.IsLoading"
-                    OnMethodChanged="UpdateMethod"
-                    OnUrlChanged="UpdateUrl"
-                    OnSend="SendRequest"
-                    OnCancel="CancelRequest" />
-
-            @if (_showCurlImport || _showCurlExport)
+        <div class="rk-api-shell-body">
+            @if (_sidebarOpen)
             {
-                <div class="rk-request-drawer">
-                    <div class="rk-request-drawer-header">
+                <div class="rk-api-sidebar-shell">
+                    <div class="rk-api-pane-header rk-api-pane-header-sidebar">
                         <div>
-                            <div class="rk-settings-title">@(_showCurlImport ? "Import cURL" : "Export cURL")</div>
-                            <div class="rk-settings-subtitle">
-                                @(_showCurlImport
-                                    ? "Paste a cURL command to create a new request alongside the current selection."
-                                    : "Review the generated command, then copy or download it.")
-                            </div>
+                            <span class="rk-api-pane-kicker">Workspace</span>
+                            <h3 class="rk-api-pane-title">@SidebarTitle</h3>
+                            <p class="rk-api-pane-text">@SidebarSummary</p>
                         </div>
-                        <button type="button" class="rk-btn-icon" @onclick="CloseCurlPanel" title="Close">
-                            x
-                        </button>
                     </div>
 
-                    <textarea class="rk-textarea rk-curl-textarea"
-                              value="@_curlBuffer"
-                              readonly="@_showCurlExport"
-                              @oninput="e => _curlBuffer = e.Value?.ToString() ?? string.Empty"
-                              placeholder="curl https://api.example.com/items -H 'Accept: application/json'"></textarea>
+                    <div class="rk-api-sidebar">
+                        <div class="rk-sidebar-tab-bar">
+                            <button class="rk-sidebar-tab @SidebarTabClass("collections")" @onclick="@(() => SetSidebarTab("collections"))">Collections</button>
+                            <button class="rk-sidebar-tab @SidebarTabClass("history")" @onclick="@(() => SetSidebarTab("history"))">History</button>
+                        </div>
+                        <div class="rk-sidebar-content">
+                            @if (_sidebarTab == "collections")
+                            {
+                                <CollectionsSidebar />
+                            }
+                            else
+                            {
+                                <HistoryPanel />
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
 
-                    @if (!string.IsNullOrWhiteSpace(_curlError))
-                    {
-                        <div class="rk-error-banner rk-inline-banner">@_curlError</div>
-                    }
+            <div class="rk-api-client">
+                <div class="rk-api-request-shell">
+                    <div class="rk-api-pane-header">
+                        <div>
+                            <span class="rk-api-pane-kicker">Request</span>
+                            <h3 class="rk-api-pane-title">@RequestPaneTitle</h3>
+                            <p class="rk-api-pane-text">@RequestPaneSummary</p>
+                        </div>
+                        <div class="rk-api-pane-meta-group">
+                            <span class="rk-api-pane-chip">@RequestPaneChip</span>
+                            <span class="rk-api-pane-meta">@RequestPaneMeta</span>
+                        </div>
+                    </div>
 
-                    <div class="rk-request-drawer-actions">
-                        @if (_showCurlImport)
+                    <div class="rk-request-section">
+                        <div class="rk-request-toolbar">
+                            <button class="rk-btn-icon rk-sidebar-toggle" @onclick="ToggleSidebar" title="@(_sidebarOpen ? "Hide sidebar" : "Show sidebar")">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                                    <rect x="1" y="2" width="14" height="12" rx="1.5" />
+                                    <line x1="5.5" y1="2" x2="5.5" y2="14" />
+                                </svg>
+                            </button>
+                            <input class="rk-input rk-request-name-input"
+                                   type="text"
+                                   value="@ApiState.ActiveRequest.Name"
+                                   @oninput="e => UpdateName(e.Value?.ToString() ?? string.Empty)"
+                                   placeholder="Request name" />
+                            <div class="rk-request-toolbar-actions">
+                                <button class="rk-btn rk-btn-sm" @onclick="OpenCurlImport">Import cURL</button>
+                                <button class="rk-btn rk-btn-sm" @onclick="OpenCurlExport" disabled="@(!CanExportCurl)">Export cURL</button>
+                            </div>
+                        </div>
+
+                        <UrlBar Method="@ApiState.ActiveRequest.Method"
+                                Url="@ApiState.ActiveRequest.Url"
+                                IsLoading="@ApiState.IsLoading"
+                                OnMethodChanged="UpdateMethod"
+                                OnUrlChanged="UpdateUrl"
+                                OnSend="SendRequest"
+                                OnCancel="CancelRequest" />
+
+                        @if (_showCurlImport || _showCurlExport)
                         {
-                            <button class="rk-btn rk-btn-primary" @onclick="ImportCurl">Import Request</button>
+                            <div class="rk-request-drawer">
+                                <div class="rk-request-drawer-header">
+                                    <div>
+                                        <div class="rk-settings-title">@(_showCurlImport ? "Import cURL" : "Export cURL")</div>
+                                        <div class="rk-settings-subtitle">
+                                            @(_showCurlImport
+                                                ? "Paste a cURL command to create a new request alongside the current selection."
+                                                : "Review the generated command, then copy or download it.")
+                                        </div>
+                                    </div>
+                                    <button type="button" class="rk-btn-icon" @onclick="CloseCurlPanel" title="Close">
+                                        x
+                                    </button>
+                                </div>
+
+                                <textarea class="rk-textarea rk-curl-textarea"
+                                          value="@_curlBuffer"
+                                          readonly="@_showCurlExport"
+                                          @oninput="e => _curlBuffer = e.Value?.ToString() ?? string.Empty"
+                                          placeholder="curl https://api.example.com/items -H 'Accept: application/json'"></textarea>
+
+                                @if (!string.IsNullOrWhiteSpace(_curlError))
+                                {
+                                    <div class="rk-error-banner rk-inline-banner">@_curlError</div>
+                                }
+
+                                <div class="rk-request-drawer-actions">
+                                    @if (_showCurlImport)
+                                    {
+                                        <button class="rk-btn rk-btn-primary" @onclick="ImportCurl">Import Request</button>
+                                    }
+                                    else
+                                    {
+                                        <button class="rk-btn rk-btn-primary" @onclick="CopyCurl">@(_curlCopied ? "Copied!" : "Copy Command")</button>
+                                        <button class="rk-btn" @onclick="DownloadCurl">Download</button>
+                                    }
+
+                                    <button class="rk-btn" @onclick="CloseCurlPanel">Close</button>
+                                </div>
+                            </div>
+                        }
+
+                        @if (ShowApiOnboarding)
+                        {
+                            <div class="rk-api-onboarding">
+                                <div class="rk-api-onboarding-hero">
+                                    <div class="rk-api-onboarding-eyebrow">API Client</div>
+                                    <h2 class="rk-api-onboarding-title">Start with a real request, not a blank shell.</h2>
+                                    <p class="rk-api-onboarding-copy">
+                                        Build a request manually, load a starter example, import a cURL command, or set up environments
+                                        before you send traffic.
+                                    </p>
+                                    <div class="rk-api-onboarding-actions">
+                                        <button class="rk-btn rk-btn-primary" @onclick="CreateBlankRequest">Create Request</button>
+                                        <button class="rk-btn" @onclick="LoadExampleRequest">Load Example</button>
+                                        <button class="rk-btn" @onclick="OpenCurlImport">Import cURL</button>
+                                        <button class="rk-btn" @onclick="OpenSettings">Open Settings</button>
+                                    </div>
+                                </div>
+
+                                <div class="rk-api-onboarding-grid">
+                                    <div class="rk-api-onboarding-card">
+                                        <div class="rk-api-onboarding-card-title">Organize as you go</div>
+                                        <div class="rk-api-onboarding-card-copy">Requests land inside collections and folders so the sidebar becomes useful immediately.</div>
+                                    </div>
+                                    <div class="rk-api-onboarding-card">
+                                        <div class="rk-api-onboarding-card-title">Use environment variables</div>
+                                        <div class="rk-api-onboarding-card-copy">Define values once and reference them with <code>{{baseUrl}}</code>, tokens, or custom headers.</div>
+                                    </div>
+                                    <div class="rk-api-onboarding-card">
+                                        <div class="rk-api-onboarding-card-title">Inspect and branch</div>
+                                        <div class="rk-api-onboarding-card-copy">Responses can flow straight into regex testing or diffing once you start sending requests.</div>
+                                    </div>
+                                </div>
+                            </div>
                         }
                         else
                         {
-                            <button class="rk-btn rk-btn-primary" @onclick="CopyCurl">@(_curlCopied ? "Copied!" : "Copy Command")</button>
-                            <button class="rk-btn" @onclick="DownloadCurl">Download</button>
+                            <div class="rk-tab-bar" role="tablist">
+                                <button class="rk-tab @TabClass("params")" role="tab" aria-selected="@(_activeTab == "params")" @onclick="@(() => SetTab("params"))">Params</button>
+                                <button class="rk-tab @TabClass("headers")" role="tab" aria-selected="@(_activeTab == "headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
+                                <button class="rk-tab @TabClass("body")" role="tab" aria-selected="@(_activeTab == "body")" @onclick="@(() => SetTab("body"))">Body</button>
+                                <button class="rk-tab @TabClass("auth")" role="tab" aria-selected="@(_activeTab == "auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
+                                <button class="rk-tab @TabClass("settings")" role="tab" aria-selected="@(_activeTab == "settings")" @onclick="@(() => SetTab("settings"))">Settings</button>
+                            </div>
+
+                            <div class="rk-tab-content">
+                                @switch (_activeTab)
+                                {
+                                    case "params":
+                                        <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
+                                        break;
+                                    case "headers":
+                                        <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
+                                        break;
+                                    case "body":
+                                        <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
+                                        break;
+                                    case "auth":
+                                        <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
+                                        break;
+                                    case "settings":
+                                        <ApiClientSettingsPanel />
+                                        break;
+                                }
+                            </div>
                         }
-
-                        <button class="rk-btn" @onclick="CloseCurlPanel">Close</button>
                     </div>
                 </div>
-            }
 
-            @if (ShowApiOnboarding)
-            {
-                <div class="rk-api-onboarding">
-                    <div class="rk-api-onboarding-hero">
-                        <div class="rk-api-onboarding-eyebrow">API Client</div>
-                        <h2 class="rk-api-onboarding-title">Start with a real request, not a blank shell.</h2>
-                        <p class="rk-api-onboarding-copy">
-                            Build a request manually, load a starter example, import a cURL command, or set up environments
-                            before you send traffic.
-                        </p>
-                        <div class="rk-api-onboarding-actions">
-                            <button class="rk-btn rk-btn-primary" @onclick="CreateBlankRequest">Create Request</button>
-                            <button class="rk-btn" @onclick="LoadExampleRequest">Load Example</button>
-                            <button class="rk-btn" @onclick="OpenCurlImport">Import cURL</button>
-                            <button class="rk-btn" @onclick="OpenSettings">Open Settings</button>
+                <div class="rk-api-response-shell">
+                    <div class="rk-api-pane-header">
+                        <div>
+                            <span class="rk-api-pane-kicker">Response</span>
+                            <h3 class="rk-api-pane-title">@ResponsePaneTitle</h3>
+                            <p class="rk-api-pane-text">@ResponsePaneSummary</p>
+                        </div>
+                        <div class="rk-api-pane-meta-group">
+                            <span class="rk-api-pane-chip @ResponsePaneChipClass">@ResponsePaneChip</span>
+                            <span class="rk-api-pane-meta">@ResponsePaneMeta</span>
                         </div>
                     </div>
 
-                    <div class="rk-api-onboarding-grid">
-                        <div class="rk-api-onboarding-card">
-                            <div class="rk-api-onboarding-card-title">Organize as you go</div>
-                            <div class="rk-api-onboarding-card-copy">Requests land inside collections and folders so the sidebar becomes useful immediately.</div>
-                        </div>
-                        <div class="rk-api-onboarding-card">
-                            <div class="rk-api-onboarding-card-title">Use environment variables</div>
-                            <div class="rk-api-onboarding-card-copy">Define values once and reference them with <code>{{baseUrl}}</code>, tokens, or custom headers.</div>
-                        </div>
-                        <div class="rk-api-onboarding-card">
-                            <div class="rk-api-onboarding-card-title">Inspect and branch</div>
-                            <div class="rk-api-onboarding-card-copy">Responses can flow straight into regex testing or diffing once you start sending requests.</div>
-                        </div>
+                    <div class="rk-response-section">
+                        <ResponseViewer Response="@ApiState.ActiveResponse" IsLoading="@ApiState.IsLoading" />
                     </div>
                 </div>
-            }
-            else
-            {
-                <div class="rk-tab-bar" role="tablist">
-                    <button class="rk-tab @TabClass("params")" role="tab" aria-selected="@(_activeTab == "params")" @onclick="@(() => SetTab("params"))">Params</button>
-                    <button class="rk-tab @TabClass("headers")" role="tab" aria-selected="@(_activeTab == "headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
-                    <button class="rk-tab @TabClass("body")" role="tab" aria-selected="@(_activeTab == "body")" @onclick="@(() => SetTab("body"))">Body</button>
-                    <button class="rk-tab @TabClass("auth")" role="tab" aria-selected="@(_activeTab == "auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
-                    <button class="rk-tab @TabClass("settings")" role="tab" aria-selected="@(_activeTab == "settings")" @onclick="@(() => SetTab("settings"))">Settings</button>
-                </div>
-
-                <div class="rk-tab-content">
-                    @switch (_activeTab)
-                    {
-                        case "params":
-                            <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
-                            break;
-                        case "headers":
-                            <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
-                            break;
-                        case "body":
-                            <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
-                            break;
-                        case "auth":
-                            <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
-                            break;
-                        case "settings":
-                            <ApiClientSettingsPanel />
-                            break;
-                    }
-                </div>
-            }
-        </div>
-
-        <div class="rk-response-section">
-            <ResponseViewer Response="@ApiState.ActiveResponse" IsLoading="@ApiState.IsLoading" />
+            </div>
         </div>
     </div>
 </div>
@@ -190,6 +268,60 @@
 
     private bool ShowApiOnboarding => !ApiState.Requests.Any() && !HasMeaningfulDraft();
     private bool CanExportCurl => !string.IsNullOrWhiteSpace(ApiState.ActiveRequest.Url);
+    private string SidebarTitle => _sidebarTab == "collections" ? "Collections" : "History";
+    private string SidebarSummary => _sidebarTab == "collections"
+        ? $"{ApiState.Collections.Count} {Pluralize("collection", ApiState.Collections.Count)} • {ApiState.Requests.Count} {Pluralize("request", ApiState.Requests.Count)}"
+        : $"{ApiState.History.Count} saved {Pluralize("run", ApiState.History.Count)} ready to restore.";
+    private string ActiveEnvironmentName => ApiState.ActiveEnvironment?.Name ?? "Default";
+    private string WorkspaceSummary => $"{ApiState.Collections.Count} {Pluralize("collection", ApiState.Collections.Count)} • {ApiState.Requests.Count} {Pluralize("request", ApiState.Requests.Count)} • {ApiState.History.Count} history entries";
+    private string EnvironmentSummary => $"{(ApiState.CorsProxy.Enabled ? "External proxy" : "Browser direct mode")} • {ApiState.Settings.TimeoutSeconds}s timeout";
+    private string LatestResponseHeadline => ApiState.IsLoading
+        ? "Request in flight"
+        : ApiState.ActiveResponse is null
+            ? "No response yet"
+            : $"{ApiState.ActiveResponse.StatusCode} {ApiState.ActiveResponse.StatusText}";
+    private string LatestResponseMeta => ApiState.IsLoading
+        ? "Inspect status, headers, and body when the request completes."
+        : ApiState.ActiveResponse is null
+            ? "Send a request to unlock raw, pretty, and preview inspection."
+            : $"{ApiState.ActiveResponse.ResponseTimeMs:F0} ms • {FormatSize(ApiState.ActiveResponse.ResponseSizeBytes)} • {ApiState.ActiveResponse.DetectedContentType}";
+    private string RequestPaneTitle => ShowApiOnboarding
+        ? "Start a request workflow"
+        : string.IsNullOrWhiteSpace(ApiState.ActiveRequest.Name) ? "Untitled request" : ApiState.ActiveRequest.Name;
+    private string RequestPaneSummary => ShowApiOnboarding
+        ? "Create a request, import cURL, and configure environments before you send traffic."
+        : string.IsNullOrWhiteSpace(ApiState.ActiveRequest.Url)
+            ? "Configure the URL, params, auth, body, and request settings before sending."
+            : $"{ApiState.ActiveRequest.Method} {ApiState.ActiveRequest.Url}";
+    private string RequestPaneChip => ShowApiOnboarding ? "Onboarding" : ApiState.ActiveRequest.Method.ToString();
+    private string RequestPaneMeta => ShowApiOnboarding
+        ? "Collections, environments, and request history stay available in the workspace sidebar."
+        : $"{GetRequestLocationSummary()} • {ActiveEnvironmentName} environment";
+    private string ResponsePaneTitle => ApiState.IsLoading
+        ? "Sending request"
+        : ApiState.ActiveResponse is null
+            ? "Waiting for a response"
+            : $"{ApiState.ActiveResponse.StatusCode} {ApiState.ActiveResponse.StatusText}";
+    private string ResponsePaneSummary => ApiState.IsLoading
+        ? "The response inspector will update when the current request completes."
+        : ApiState.ActiveResponse is null
+            ? "Raw, pretty, preview, diff, and regex tools appear here after you send a request."
+            : $"Inspect the latest payload in body, preview, and header views without leaving the workbench.";
+    private string ResponsePaneChip => ApiState.IsLoading
+        ? "Sending"
+        : ApiState.ActiveResponse is null
+            ? "Ready"
+            : ApiState.ActiveResponse.DetectedContentType.ToString();
+    private string ResponsePaneChipClass => ApiState.IsLoading
+        ? "is-active"
+        : ApiState.ActiveResponse is null
+            ? "is-neutral"
+            : GetResponseToneClass(ApiState.ActiveResponse.StatusCode);
+    private string ResponsePaneMeta => ApiState.IsLoading
+        ? "Cancel from the Send button if needed."
+        : ApiState.ActiveResponse is null
+            ? "Ctrl + Enter sends the selected request."
+            : $"{ApiState.ActiveResponse.Headers.Count} headers • {FormatSize(ApiState.ActiveResponse.ResponseSizeBytes)}";
 
     protected override void OnInitialized()
     {
@@ -270,7 +402,15 @@
         ApiState.SetActiveRequest(request);
     }
 
-    private void OpenSettings() => _activeTab = "settings";
+    private void OpenSettings()
+    {
+        if (ShowApiOnboarding)
+        {
+            CreateBlankRequest();
+        }
+
+        _activeTab = "settings";
+    }
 
     private void OpenCurlImport()
     {
@@ -639,5 +779,41 @@
         var invalid = System.IO.Path.GetInvalidFileNameChars();
         var sanitized = new string(source.Select(character => invalid.Contains(character) ? '-' : character).ToArray());
         return string.IsNullOrWhiteSpace(sanitized) ? fallback : sanitized;
+    }
+
+    private string GetRequestLocationSummary()
+    {
+        if (ApiState.SelectedRequestId is null)
+        {
+            return "Draft request";
+        }
+
+        var location = ApiState.GetRequestLocation(ApiState.SelectedRequestId);
+        if (location is null)
+        {
+            return "Draft request";
+        }
+
+        var collection = ApiState.GetCollection(location.Value.CollectionId);
+        return collection is null
+            ? "Workspace request"
+            : $"In {collection.Name}";
+    }
+
+    private static string GetResponseToneClass(int statusCode)
+    {
+        if (statusCode >= 200 && statusCode < 300) return "is-success";
+        if (statusCode >= 300 && statusCode < 400) return "is-warning";
+        if (statusCode >= 400) return "is-error";
+        return "is-neutral";
+    }
+
+    private static string Pluralize(string singular, int count) => count == 1 ? singular : $"{singular}s";
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 }

@@ -7,29 +7,53 @@
 
 <header class="rk-topbar">
     <div class="rk-topbar-left">
-        <span class="rk-logo">RequestKit</span>
+        <button type="button" class="rk-brand-btn" @onclick='() => Nav.NavigateTo("/")' title="Go to home">
+            <img class="rk-logo-mark"
+                 src="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='12' height='12' x='2' y='2' fill='%232563EB'/></svg>"
+                 alt="RequestKit" />
+            <span class="rk-logo-stack">
+                <span class="rk-logo">RequestKit</span>
+                <span class="rk-logo-subtitle">API, regex, and diff workbench</span>
+            </span>
+        </button>
     </div>
     <div class="rk-topbar-center" role="tablist">
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.ApiClient ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.ApiClient)"
-                @onclick="() => App.SetMode(ToolMode.ApiClient)">API Client</button>
+                @onclick="() => App.SetMode(ToolMode.ApiClient)">
+            <span class="rk-mode-tab-label">API Client</span>
+            <span class="rk-mode-tab-hint">Ctrl+1</span>
+        </button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.RegexBuilder ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.RegexBuilder)"
-                @onclick="() => App.SetMode(ToolMode.RegexBuilder)">Regex</button>
+                @onclick="() => App.SetMode(ToolMode.RegexBuilder)">
+            <span class="rk-mode-tab-label">Regex</span>
+            <span class="rk-mode-tab-hint">Ctrl+2</span>
+        </button>
         <button class="rk-mode-tab @(App.ActiveMode == ToolMode.DiffViewer ? "active" : "")"
                 role="tab" aria-selected="@(App.ActiveMode == ToolMode.DiffViewer)"
-                @onclick="() => App.SetMode(ToolMode.DiffViewer)">Diff</button>
+                @onclick="() => App.SetMode(ToolMode.DiffViewer)">
+            <span class="rk-mode-tab-label">Diff</span>
+            <span class="rk-mode-tab-hint">Ctrl+3</span>
+        </button>
     </div>
     <div class="rk-topbar-right">
-        <input class="rk-input"
-               style="min-width: 220px;"
-               value="@ApiState.CurrentWorkspaceName"
-               @oninput="OnWorkspaceNameInput"
-               title="Workspace name" />
-        <button class="rk-btn rk-btn-sm" @onclick="SaveWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Save</button>
-        <button class="rk-btn rk-btn-sm" @onclick="CreateWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">New</button>
-        <button class="rk-btn rk-btn-sm" @onclick="DeleteWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Delete</button>
-        <button class="rk-btn rk-btn-sm" @onclick='() => Nav.NavigateTo("/")'>Home</button>
+        <div class="rk-topbar-status @WorkspaceStateClass">
+            <span class="rk-topbar-status-dot"></span>
+            <span>@WorkspaceStateLabel</span>
+        </div>
+        <label class="rk-topbar-workspace">
+            <span class="rk-topbar-field-label">Workspace</span>
+            <input class="rk-input rk-topbar-workspace-input"
+                   value="@ApiState.CurrentWorkspaceName"
+                   @oninput="OnWorkspaceNameInput"
+                   title="Workspace name" />
+        </label>
+        <div class="rk-topbar-actions">
+            <button class="rk-btn rk-btn-sm" @onclick="SaveWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Save</button>
+            <button class="rk-btn rk-btn-sm" @onclick="CreateWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">New</button>
+            <button class="rk-btn rk-btn-sm" @onclick="DeleteWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Delete</button>
+        </div>
     </div>
 </header>
 
@@ -42,6 +66,20 @@
 
     private void OnWorkspaceNameInput(ChangeEventArgs e) =>
         ApiState.SetWorkspaceName(e.Value?.ToString() ?? string.Empty);
+
+    private string WorkspaceStateLabel => ApiState.IsWorkspaceSaving
+        ? "Saving workspace..."
+        : ApiState.IsWorkspaceDirty
+            ? "Unsaved changes"
+            : ApiState.LastSavedAt is null
+                ? "Ready"
+                : $"Saved {FormatTimestamp(ApiState.LastSavedAt.Value)}";
+
+    private string WorkspaceStateClass => ApiState.IsWorkspaceSaving
+        ? "is-saving"
+        : ApiState.IsWorkspaceDirty
+            ? "is-dirty"
+            : "is-ready";
 
     private async Task SaveWorkspaceAsync()
     {
@@ -124,5 +162,14 @@
     {
         App.OnModeChanged -= StateHasChanged;
         ApiState.OnChange -= StateHasChanged;
+    }
+
+    private static string FormatTimestamp(DateTime timestamp)
+    {
+        var diff = DateTime.UtcNow - timestamp;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{diff.TotalMinutes:F0}m ago";
+        if (diff.TotalHours < 24) return $"{diff.TotalHours:F0}h ago";
+        return timestamp.ToString("MMM d, HH:mm");
     }
 }

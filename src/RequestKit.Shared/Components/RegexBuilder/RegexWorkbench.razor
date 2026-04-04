@@ -1,87 +1,173 @@
+@using RequestKit.Core.Data
 @inject RegexState State
 @inject RegexInterop Regex
 @inject AppState App
+@inject ApiClientState ApiState
 @implements IDisposable
 
 <div class="rk-regex-builder">
-    <!-- Left: Common Patterns sidebar -->
-    <div class="rk-regex-sidebar">
-        <div class="rk-tab-bar rk-tab-bar-sm">
-            <span class="rk-tab active">Common Patterns</span>
+    <div class="rk-regex-hero">
+        <div class="rk-regex-hero-copy">
+            <span class="rk-regex-kicker">Regex Builder</span>
+            <h2 class="rk-regex-hero-title">Test patterns, inspect matches, and explain tokens without leaving the workbench.</h2>
+            <p class="rk-regex-hero-text">
+                Build a pattern, toggle flags, drop in API payloads, and see inline matches plus explanations while you type.
+                Common patterns stay nearby so you can start from real examples instead of a blank editor.
+            </p>
         </div>
-        <div class="rk-tab-content">
-            <CommonPatternsPanel OnPatternSelected="OnCommonPatternSelected" />
-        </div>
-    </div>
-
-    <!-- Center: Pattern + Test String + Highlighted Output -->
-    <div class="rk-regex-main">
-        <!-- Pattern input row -->
-        <div class="rk-regex-input-area">
-            <div class="rk-regex-pattern-row">
-                <span class="rk-regex-slash">/</span>
-                <input class="rk-input rk-regex-pattern-input"
-                       placeholder="Enter regex pattern..."
-                       value="@State.Pattern"
-                       @oninput="OnPatternInput" />
-                <span class="rk-regex-slash">/</span>
-                <FlagsBar />
-            </div>
-            @if (App.LastResponseBody is not null)
-            {
-                <button class="rk-btn rk-btn-sm rk-regex-pipe-btn" @onclick="PipeFromResponse">
-                    Pipe from Response
-                </button>
-            }
-        </div>
-
-        <!-- Test string -->
-        <div class="rk-regex-test-area">
-            <div class="rk-regex-test-header">
-                <span class="rk-label" style="margin-bottom:0;">Test String</span>
-                <span class="rk-regex-match-count">
-                    @if (State.Matches.Count > 0)
-                    {
-                        <span class="rk-match-count-badge">@State.Matches.Count match@(State.Matches.Count != 1 ? "es" : "")</span>
-                    }
-                </span>
-            </div>
-            <textarea class="rk-textarea rk-regex-test-input"
-                      placeholder="Enter test string..."
-                      @oninput="OnTestStringInput">@State.TestString</textarea>
-        </div>
-
-        <!-- Highlighted preview -->
-        @if (!string.IsNullOrEmpty(State.TestString) && State.Matches.Count > 0)
-        {
-            <div class="rk-regex-highlight-area">
-                <span class="rk-label">Highlighted Matches</span>
-                <div class="rk-regex-highlight-output">@((MarkupString)BuildHighlightedHtml())</div>
-            </div>
-        }
-    </div>
-
-    <!-- Right: Matches + Explanation -->
-    <div class="rk-regex-results">
-        <div class="rk-tab-bar rk-tab-bar-sm">
-            <button class="rk-tab @(ActiveResultTab == "matches" ? "active" : "")" @onclick='() => ActiveResultTab = "matches"'>
-                Matches
-                @if (State.Matches.Count > 0)
+        <div class="rk-regex-hero-right">
+            <div class="rk-regex-hero-actions">
+                <button class="rk-btn rk-btn-primary" @onclick='() => LoadQuickPattern("Email")'>Email Pattern</button>
+                <button class="rk-btn rk-btn-sm" @onclick='() => LoadQuickPattern("URL")'>URL Pattern</button>
+                <button class="rk-btn rk-btn-sm" @onclick='() => LoadQuickPattern("UUID")'>UUID Pattern</button>
+                @if (App.LastResponseBody is not null)
                 {
-                    <span class="rk-match-count-badge rk-match-count-badge-sm">@State.Matches.Count</span>
+                    <button class="rk-btn rk-btn-sm" @onclick="PipeFromResponse">Use Last Response</button>
                 }
-            </button>
-            <button class="rk-tab @(ActiveResultTab == "explanation" ? "active" : "")" @onclick='() => ActiveResultTab = "explanation"'>Explanation</button>
+            </div>
+
+            <div class="rk-regex-hero-stats">
+                <div class="rk-regex-hero-stat">
+                    <span class="rk-regex-hero-stat-label">Workspace</span>
+                    <strong>@ApiState.CurrentWorkspaceName</strong>
+                    <span class="rk-regex-hero-stat-meta">@WorkspaceSummary</span>
+                </div>
+                <div class="rk-regex-hero-stat">
+                    <span class="rk-regex-hero-stat-label">Environment</span>
+                    <strong>@ActiveEnvironmentName</strong>
+                    <span class="rk-regex-hero-stat-meta">@EnvironmentSummary</span>
+                </div>
+                <div class="rk-regex-hero-stat">
+                    <span class="rk-regex-hero-stat-label">Latest Response</span>
+                    <strong>@LatestResponseHeadline</strong>
+                    <span class="rk-regex-hero-stat-meta">@LatestResponseMeta</span>
+                </div>
+            </div>
         </div>
-        <div class="rk-tab-content">
-            @if (ActiveResultTab == "matches")
-            {
-                <MatchDetails />
-            }
-            else
-            {
-                <ExplanationPanel />
-            }
+    </div>
+
+    <div class="rk-regex-shell-body">
+        <div class="rk-regex-sidebar-shell">
+            <div class="rk-regex-pane-header rk-regex-pane-header-sidebar">
+                <div>
+                    <span class="rk-regex-pane-kicker">Library</span>
+                    <h3 class="rk-regex-pane-title">Common patterns</h3>
+                    <p class="rk-regex-pane-text">@PatternLibrarySummary</p>
+                </div>
+            </div>
+
+            <div class="rk-regex-sidebar">
+                <div class="rk-tab-bar rk-tab-bar-sm">
+                    <span class="rk-tab active">Common Patterns</span>
+                </div>
+                <div class="rk-tab-content">
+                    <CommonPatternsPanel OnPatternSelected="OnCommonPatternSelected" />
+                </div>
+            </div>
+        </div>
+
+        <div class="rk-regex-main-shell">
+            <div class="rk-regex-pane-header">
+                <div>
+                    <span class="rk-regex-pane-kicker">Pattern</span>
+                    <h3 class="rk-regex-pane-title">@PatternPaneTitle</h3>
+                    <p class="rk-regex-pane-text">@PatternPaneSummary</p>
+                </div>
+                <div class="rk-regex-pane-meta-group">
+                    <span class="rk-regex-pane-chip @PatternPaneChipClass">@PatternPaneChip</span>
+                    <span class="rk-regex-pane-meta">@PatternPaneMeta</span>
+                </div>
+            </div>
+
+            <div class="rk-regex-main">
+                <div class="rk-regex-input-area">
+                    <div class="rk-regex-pattern-row">
+                        <span class="rk-regex-slash">/</span>
+                        <input class="rk-input rk-regex-pattern-input"
+                               placeholder="Enter regex pattern..."
+                               value="@State.Pattern"
+                               @oninput="OnPatternInput" />
+                        <span class="rk-regex-slash">/</span>
+                        <FlagsBar />
+                    </div>
+                    @if (App.LastResponseBody is not null)
+                    {
+                        <button class="rk-btn rk-btn-sm rk-regex-pipe-btn" @onclick="PipeFromResponse">
+                            Pipe from Response
+                        </button>
+                    }
+                </div>
+
+                <div class="rk-regex-test-area">
+                    <div class="rk-regex-test-header">
+                        <span class="rk-label" style="margin-bottom:0;">Test String</span>
+                        <span class="rk-regex-match-count">
+                            @if (State.Matches.Count > 0)
+                            {
+                                <span class="rk-match-count-badge">@State.Matches.Count match@(State.Matches.Count != 1 ? "es" : "")</span>
+                            }
+                        </span>
+                    </div>
+                    <textarea class="rk-textarea rk-regex-test-input"
+                              placeholder="Enter test string..."
+                              @oninput="OnTestStringInput">@State.TestString</textarea>
+                </div>
+
+                @if (HasPattern || HasTestString)
+                {
+                    <div class="rk-regex-highlight-area">
+                        <span class="rk-label">Highlighted Matches</span>
+                        @if (HasTestString && State.Matches.Count > 0)
+                        {
+                            <div class="rk-regex-highlight-output">@((MarkupString)BuildHighlightedHtml())</div>
+                        }
+                        else
+                        {
+                            <div class="rk-regex-highlight-empty">@HighlightEmptyMessage</div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="rk-regex-results-shell">
+            <div class="rk-regex-pane-header">
+                <div>
+                    <span class="rk-regex-pane-kicker">Results</span>
+                    <h3 class="rk-regex-pane-title">@ResultsPaneTitle</h3>
+                    @if (!string.IsNullOrWhiteSpace(ResultsPaneSummary))
+                    {
+                        <p class="rk-regex-pane-text">@ResultsPaneSummary</p>
+                    }
+                </div>
+                <div class="rk-regex-pane-meta-group">
+                    <span class="rk-regex-pane-chip @ResultsPaneChipClass">@ResultsPaneChip</span>
+                    <span class="rk-regex-pane-meta">@ResultsPaneMeta</span>
+                </div>
+            </div>
+
+            <div class="rk-regex-results">
+                <div class="rk-tab-bar rk-tab-bar-sm">
+                    <button class="rk-tab @(ActiveResultTab == "matches" ? "active" : "")" @onclick='() => ActiveResultTab = "matches"'>
+                        Matches
+                        @if (State.Matches.Count > 0)
+                        {
+                            <span class="rk-match-count-badge rk-match-count-badge-sm">@State.Matches.Count</span>
+                        }
+                    </button>
+                    <button class="rk-tab @(ActiveResultTab == "explanation" ? "active" : "")" @onclick='() => ActiveResultTab = "explanation"'>Explanation</button>
+                </div>
+                <div class="rk-tab-content">
+                    @if (ActiveResultTab == "matches")
+                    {
+                        <MatchDetails />
+                    }
+                    else
+                    {
+                        <ExplanationPanel />
+                    }
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -90,10 +176,74 @@
     private string ActiveResultTab = "matches";
     private CancellationTokenSource? _debounceCts;
     private const int DebounceDelayMs = 200;
+    private bool HasPattern => !string.IsNullOrWhiteSpace(State.Pattern);
+    private bool HasTestString => !string.IsNullOrWhiteSpace(State.TestString);
+    private string ActiveEnvironmentName => ApiState.ActiveEnvironment?.Name ?? "Default";
+    private string WorkspaceSummary => $"{ApiState.Collections.Count} {Pluralize("collection", ApiState.Collections.Count)} • {ApiState.Requests.Count} {Pluralize("request", ApiState.Requests.Count)} • {ApiState.History.Count} history entries";
+    private string EnvironmentSummary => $"{(ApiState.CorsProxy.Enabled ? "External proxy" : "Browser direct mode")} • {ApiState.Settings.TimeoutSeconds}s timeout";
+    private string LatestResponseHeadline => ApiState.IsLoading
+        ? "Request in flight"
+        : ApiState.ActiveResponse is null
+            ? "No response yet"
+            : ApiState.ActiveResponse.StatusCode.ToString();
+    private string LatestResponseMeta => ApiState.IsLoading
+        ? "Inspect status, headers, and body when the request completes."
+        : ApiState.ActiveResponse is null
+            ? "Send a request to populate response timing, size, and content type."
+            : $"{ApiState.ActiveResponse.ResponseTimeMs:F0} ms • {FormatSize(ApiState.ActiveResponse.ResponseSizeBytes)} • {ApiState.ActiveResponse.DetectedContentType}";
+    private string PatternLibrarySummary => $"{CommonPatternsLibrary.Categories.Count()} categories • {CommonPatternsLibrary.Patterns.Count} starter patterns";
+    private string PatternPaneTitle => HasPattern ? $"/{Truncate(State.Pattern, 56)}/" : "No pattern selected";
+    private string PatternPaneSummary => State.ErrorMessage is not null
+        ? State.ErrorMessage
+        : !HasPattern
+            ? "Pick a starter pattern or type your own expression to begin matching."
+            : $"{State.Matches.Count} match{(State.Matches.Count == 1 ? string.Empty : "es")} across {State.TestString.Length} characters of test input.";
+    private string PatternPaneChip => State.ErrorMessage is not null
+        ? "Error"
+        : !HasPattern
+            ? "Ready"
+            : State.Matches.Count == 0 ? "No Matches" : $"{State.Matches.Count} Matches";
+    private string PatternPaneChipClass => State.ErrorMessage is not null
+        ? "is-error"
+        : !HasPattern
+            ? "is-neutral"
+            : State.Matches.Count == 0 ? "is-warning" : "is-success";
+    private string PatternPaneMeta => HasPattern
+        ? $"Flags: {EnabledFlagsLabel} • Test input: {State.TestString.Length} chars"
+        : "Flags are applied live while you type.";
+    private string ResultsPaneTitle => ActiveResultTab == "matches" ? "Match details" : "Pattern explanation";
+    private string ResultsPaneSummary => ActiveResultTab == "matches"
+        ? (State.ErrorMessage is not null
+            ? "Fix the pattern syntax to inspect matches and capture groups."
+            : State.Matches.Count == 0
+                ? string.Empty
+                : "Inspect each match, its position, and captured groups in one place.")
+        : (State.Explanation.Count == 0
+            ? string.Empty
+            : "Each token is broken down so the pattern is easier to reason about.");
+    private string ResultsPaneChip => ActiveResultTab == "matches"
+        ? (State.ErrorMessage is not null ? "Error" : $"{State.Matches.Count} Matches")
+        : $"{State.Explanation.Count} Tokens";
+    private string ResultsPaneChipClass => State.ErrorMessage is not null
+        ? "is-error"
+        : ActiveResultTab == "matches"
+            ? (State.Matches.Count > 0 ? "is-success" : "is-neutral")
+            : (State.Explanation.Count > 0 ? "is-active" : "is-neutral");
+    private string ResultsPaneMeta => ActiveResultTab == "matches"
+        ? (HasPattern ? $"Global search: {(State.Flags.Contains(RegexFlag.Global) ? "enabled" : "off")} • Case-insensitive: {(State.Flags.Contains(RegexFlag.CaseInsensitive) ? "enabled" : "off")}" : "Load a pattern to inspect captures and match positions.")
+        : (HasPattern ? "Explanations update when the pattern changes." : "Enter a pattern to generate explanations.");
+    private string HighlightEmptyMessage => State.ErrorMessage is not null
+        ? "The current pattern has a syntax error. Fix it to render highlighted matches."
+        : !HasTestString
+            ? "Add a test string to preview matches inline."
+            : HasPattern
+                ? "No matches to highlight yet."
+                : "Enter a pattern to start highlighting matches.";
 
     protected override void OnInitialized()
     {
         State.OnChange += StateHasChanged;
+        ApiState.OnChange += StateHasChanged;
     }
 
     private void OnPatternInput(ChangeEventArgs e)
@@ -177,6 +327,19 @@
         await ExecuteRegex();
     }
 
+    private async Task LoadQuickPattern(string name)
+    {
+        var pattern = CommonPatternsLibrary.Patterns.FirstOrDefault(item => item.Name == name);
+        if (pattern is null)
+        {
+            return;
+        }
+
+        State.SetPattern(pattern.Pattern);
+        State.SetTestString(pattern.SampleMatch);
+        await ExecuteRegex();
+    }
+
     private string BuildHighlightedHtml()
     {
         var text = State.TestString;
@@ -207,7 +370,29 @@
     public void Dispose()
     {
         State.OnChange -= StateHasChanged;
+        ApiState.OnChange -= StateHasChanged;
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
+    }
+
+    private static string Truncate(string value, int maxLength) =>
+        value.Length <= maxLength ? value : $"{value[..maxLength]}...";
+
+    private string EnabledFlagsLabel
+    {
+        get
+        {
+            var flags = BuildFlagsString();
+            return string.IsNullOrEmpty(flags) ? "none" : flags;
+        }
+    }
+
+    private static string Pluralize(string singular, int count) => count == 1 ? singular : $"{singular}s";
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
     }
 }

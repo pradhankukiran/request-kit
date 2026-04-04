@@ -7,6 +7,10 @@
             <span>@State.ErrorMessage</span>
         </div>
     }
+    else if (string.IsNullOrEmpty(State.Pattern))
+    {
+        <div class="rk-match-empty">Enter a pattern to inspect matches and capture groups.</div>
+    }
     else if (State.Matches.Count == 0 && !string.IsNullOrEmpty(State.Pattern))
     {
         <div class="rk-match-empty">No matches found.</div>

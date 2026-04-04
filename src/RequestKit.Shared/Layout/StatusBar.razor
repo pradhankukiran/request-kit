@@ -3,18 +3,20 @@
 
 <footer class="rk-statusbar" role="status">
     <div class="rk-statusbar-left">
-        <span class="rk-status-dot"></span>
-        <span>@WorkspaceStateLabel</span>
+        <span class="rk-status-pill @WorkspaceStateClass">
+            <span class="rk-status-dot"></span>
+            <span>@WorkspaceStateLabel</span>
+        </span>
+        <span class="rk-status-chip">@ApiState.CurrentWorkspaceName</span>
     </div>
     <div class="rk-statusbar-center">
-        <span>@ApiState.CurrentWorkspaceName</span>
-        <span class="rk-sep">|</span>
-        <span>@ApiState.Requests.Count requests</span>
-        <span class="rk-sep">|</span>
-        <span>@ApiState.History.Count history</span>
+        <span class="rk-status-chip">@ApiState.Collections.Count collection@(ApiState.Collections.Count == 1 ? string.Empty : "s")</span>
+        <span class="rk-status-chip">@ApiState.Requests.Count request@(ApiState.Requests.Count == 1 ? string.Empty : "s")</span>
+        <span class="rk-status-chip">@ApiState.History.Count history</span>
     </div>
     <div class="rk-statusbar-right">
-        <span>@(ApiState.ActiveEnvironment?.Name ?? "No Environment")</span>
+        <span class="rk-status-chip">@(ApiState.ActiveEnvironment?.Name ?? "Default Environment")</span>
+        <span class="rk-status-chip">@(ApiState.Settings.AutoSaveEnabled ? $"Auto-save {ApiState.Settings.AutoSaveIntervalSeconds}s" : "Manual save")</span>
     </div>
 </footer>
 
@@ -26,6 +28,12 @@
             : ApiState.LastSavedAt is null
                 ? "Ready"
                 : $"Saved {FormatTimestamp(ApiState.LastSavedAt.Value)}";
+
+    private string WorkspaceStateClass => ApiState.IsWorkspaceSaving
+        ? "is-saving"
+        : ApiState.IsWorkspaceDirty
+            ? "is-dirty"
+            : "is-ready";
 
     private static string FormatTimestamp(DateTime timestamp)
     {
