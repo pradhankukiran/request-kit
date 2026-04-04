@@ -15,10 +15,6 @@
   <img src="https://img.shields.io/badge/Diff-DiffPlex-1D4ED8?style=for-the-badge" alt="DiffPlex" />
 </p>
 
-<p align="center">
-  <img src=".github/assets/requestkit-banner.svg" alt="RequestKit banner" />
-</p>
-
 RequestKit is a browser-native developer workbench for three jobs that usually end up scattered across different tools:
 
 - sending HTTP requests
