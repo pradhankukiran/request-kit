@@ -1,0 +1,41 @@
+@using System.Text.Json.Nodes
+
+@if (!string.IsNullOrWhiteSpace(_error))
+{
+    <div class="rk-error-banner rk-inline-banner">@_error</div>
+}
+else if (_node is not null)
+{
+    <div class="rk-json-tree">
+        <JsonTreeNode Node="@_node" Search="@Search" Depth="0" />
+    </div>
+}
+
+@code {
+    [Parameter] public string Json { get; set; } = string.Empty;
+    [Parameter] public string Search { get; set; } = string.Empty;
+
+    private JsonNode? _node;
+    private string? _error;
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrWhiteSpace(Json))
+        {
+            _node = null;
+            _error = "No JSON content to preview.";
+            return;
+        }
+
+        try
+        {
+            _node = JsonNode.Parse(Json);
+            _error = null;
+        }
+        catch (Exception ex)
+        {
+            _node = null;
+            _error = $"Could not parse JSON preview: {ex.Message}";
+        }
+    }
+}

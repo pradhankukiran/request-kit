@@ -1,4 +1,7 @@
+@inject ApiClientState ApiState
+@inject IWorkspaceStorageService Storage
 @inject AppState App
+@inject IJSRuntime Js
 @inject NavigationManager Nav
 @implements IDisposable
 
@@ -18,11 +21,108 @@
                 @onclick="() => App.SetMode(ToolMode.DiffViewer)">Diff</button>
     </div>
     <div class="rk-topbar-right">
+        <input class="rk-input"
+               style="min-width: 220px;"
+               value="@ApiState.CurrentWorkspaceName"
+               @oninput="OnWorkspaceNameInput"
+               title="Workspace name" />
+        <button class="rk-btn rk-btn-sm" @onclick="SaveWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Save</button>
+        <button class="rk-btn rk-btn-sm" @onclick="CreateWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">New</button>
+        <button class="rk-btn rk-btn-sm" @onclick="DeleteWorkspaceAsync" disabled="@ApiState.IsWorkspaceSaving">Delete</button>
         <button class="rk-btn rk-btn-sm" @onclick='() => Nav.NavigateTo("/")'>Home</button>
     </div>
 </header>
 
 @code {
-    protected override void OnInitialized() => App.OnModeChanged += StateHasChanged;
-    public void Dispose() => App.OnModeChanged -= StateHasChanged;
+    protected override void OnInitialized()
+    {
+        App.OnModeChanged += StateHasChanged;
+        ApiState.OnChange += StateHasChanged;
+    }
+
+    private void OnWorkspaceNameInput(ChangeEventArgs e) =>
+        ApiState.SetWorkspaceName(e.Value?.ToString() ?? string.Empty);
+
+    private async Task SaveWorkspaceAsync()
+    {
+        await ApiState.WorkspacePersistenceLock.WaitAsync();
+        try
+        {
+            var snapshot = ApiState.BuildWorkspace(ApiState.CurrentWorkspaceId, ApiState.CurrentWorkspaceName);
+            ApiState.SetWorkspaceSaving(true);
+            await Storage.SaveWorkspaceAsync(snapshot);
+            ApiState.MarkWorkspaceSaved(snapshot.ModifiedAt);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Workspace save failed: {ex.Message}");
+            ApiState.SetWorkspaceSaving(false);
+        }
+        finally
+        {
+            ApiState.WorkspacePersistenceLock.Release();
+        }
+    }
+
+    private async Task CreateWorkspaceAsync()
+    {
+        var workspace = new Workspace();
+
+        await ApiState.WorkspacePersistenceLock.WaitAsync();
+        try
+        {
+            ApiState.SetWorkspaceSaving(true);
+            await Storage.SaveWorkspaceAsync(workspace);
+            ApiState.LoadWorkspace(workspace);
+            ApiState.MarkWorkspaceSaved(workspace.ModifiedAt);
+            App.SetMode(ToolMode.ApiClient);
+            Nav.NavigateTo("/workbench");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Workspace create failed: {ex.Message}");
+            ApiState.LoadWorkspace(workspace);
+            ApiState.SetWorkspaceSaving(false);
+            App.SetMode(ToolMode.ApiClient);
+            Nav.NavigateTo("/workbench");
+        }
+        finally
+        {
+            ApiState.WorkspacePersistenceLock.Release();
+        }
+    }
+
+    private async Task DeleteWorkspaceAsync()
+    {
+        var confirmed = await Js.InvokeAsync<bool>(
+            "confirm",
+            $"Delete workspace \"{ApiState.CurrentWorkspaceName}\"? This cannot be undone.");
+        if (!confirmed) return;
+
+        await ApiState.WorkspacePersistenceLock.WaitAsync();
+        try
+        {
+            ApiState.SetWorkspaceSaving(true);
+            await Storage.DeleteWorkspaceAsync(ApiState.CurrentWorkspaceId);
+            ApiState.LoadWorkspace(new Workspace());
+            ApiState.SetWorkspaceSaving(false);
+            App.SetMode(ToolMode.ApiClient);
+            Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Workspace delete failed: {ex.Message}");
+            ApiState.SetWorkspaceSaving(false);
+        }
+        finally
+        {
+            ApiState.WorkspacePersistenceLock.Release();
+        }
+    }
+
+    public void Dispose()
+    {
+        App.OnModeChanged -= StateHasChanged;
+        ApiState.OnChange -= StateHasChanged;
+    }
 }

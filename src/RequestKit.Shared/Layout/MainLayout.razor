@@ -1,6 +1,9 @@
 @inherits Microsoft.AspNetCore.Components.LayoutComponentBase
 @inject AppState App
+@inject ApiClientState ApiState
 @inject KeyboardInterop Keyboard
+@inject MonacoEditorInterop Monaco
+@inject IWorkspaceStorageService Storage
 @implements IDisposable
 
 <div class="rk-app">
@@ -12,13 +15,111 @@
 </div>
 
 @code {
+    private CancellationTokenSource? _autosaveCts;
+    private string? _observedWorkspaceId;
+    private int _autosaveGeneration;
+
+    protected override void OnInitialized()
+    {
+        _observedWorkspaceId = ApiState.CurrentWorkspaceId;
+        ApiState.OnDirty += HandleWorkspaceDirty;
+        ApiState.OnChange += HandleWorkspaceChange;
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            try
+            {
+                await Monaco.InitializeAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Monaco initialization failed: {ex.Message}");
+            }
+
             await Keyboard.InitializeAsync();
             Keyboard.OnShortcut += HandleShortcut;
         }
+    }
+
+    private void HandleWorkspaceDirty() => ScheduleAutosave();
+
+    private void HandleWorkspaceChange()
+    {
+        if (_observedWorkspaceId == ApiState.CurrentWorkspaceId) return;
+
+        _observedWorkspaceId = ApiState.CurrentWorkspaceId;
+        CancelAutosave();
+    }
+
+    private void ScheduleAutosave()
+    {
+        if (!ApiState.Settings.AutoSaveEnabled)
+        {
+            CancelAutosave();
+            return;
+        }
+
+        _autosaveGeneration++;
+        var generation = _autosaveGeneration;
+
+        _autosaveCts?.Cancel();
+        _autosaveCts?.Dispose();
+        _autosaveCts = new CancellationTokenSource();
+
+        _ = AutosaveAsync(generation, _autosaveCts.Token);
+    }
+
+    private async Task AutosaveAsync(int generation, CancellationToken token)
+    {
+        try
+        {
+            var delayMs = Math.Max(1, ApiState.Settings.AutoSaveIntervalSeconds) * 1000;
+            await Task.Delay(delayMs, token);
+            await PersistWorkspaceAsync(generation, token);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Autosave failed: {ex.Message}");
+            ApiState.SetWorkspaceSaving(false);
+        }
+    }
+
+    private async Task PersistWorkspaceAsync(int generation, CancellationToken token)
+    {
+        if (!ApiState.IsWorkspaceDirty) return;
+
+        await ApiState.WorkspacePersistenceLock.WaitAsync(token);
+        try
+        {
+            if (generation != _autosaveGeneration || !ApiState.IsWorkspaceDirty)
+                return;
+
+            var snapshot = ApiState.BuildWorkspace(ApiState.CurrentWorkspaceId, ApiState.CurrentWorkspaceName);
+            ApiState.SetWorkspaceSaving(true);
+            await Storage.SaveWorkspaceAsync(snapshot);
+
+            if (generation == _autosaveGeneration)
+                ApiState.MarkWorkspaceSaved(snapshot.ModifiedAt);
+            else
+                ApiState.SetWorkspaceSaving(false);
+        }
+        finally
+        {
+            ApiState.WorkspacePersistenceLock.Release();
+        }
+    }
+
+    private void CancelAutosave()
+    {
+        _autosaveCts?.Cancel();
+        _autosaveCts?.Dispose();
+        _autosaveCts = null;
     }
 
     private void HandleShortcut(string shortcut)
@@ -35,5 +136,11 @@
         catch (Exception ex) { Console.Error.WriteLine($"Shortcut handling failed: {ex.Message}"); }
     }
 
-    public void Dispose() => Keyboard.OnShortcut -= HandleShortcut;
+    public void Dispose()
+    {
+        Keyboard.OnShortcut -= HandleShortcut;
+        ApiState.OnDirty -= HandleWorkspaceDirty;
+        ApiState.OnChange -= HandleWorkspaceChange;
+        CancelAutosave();
+    }
 }

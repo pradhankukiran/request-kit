@@ -8,8 +8,13 @@
     </select>
     <input type="text" class="rk-url-input" placeholder="https://api.example.com/endpoint"
            value="@Url" @oninput="e => OnUrlChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)" />
-    <button class="rk-btn rk-btn-primary rk-send-btn" @onclick="OnSend" disabled="@IsLoading">
-        @(IsLoading ? "Sending..." : "Send")
+    <button class="rk-btn rk-btn-primary rk-send-btn @(IsLoading ? "is-loading" : "")"
+            @onclick="HandlePrimaryAction">
+        <span>Send</span>
+        @if (IsLoading)
+        {
+            <span class="rk-send-spinner" aria-hidden="true"></span>
+        }
     </button>
 </div>
 
@@ -20,10 +25,16 @@
     [Parameter] public EventCallback<HttpMethod> OnMethodChanged { get; set; }
     [Parameter] public EventCallback<string> OnUrlChanged { get; set; }
     [Parameter] public EventCallback OnSend { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
 
     private void OnMethodSelect(ChangeEventArgs e)
     {
         if (Enum.TryParse<HttpMethod>(e.Value?.ToString(), out var method))
             OnMethodChanged.InvokeAsync(method);
     }
+
+    private Task HandlePrimaryAction() =>
+        IsLoading
+            ? OnCancel.InvokeAsync()
+            : OnSend.InvokeAsync();
 }

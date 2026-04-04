@@ -1,6 +1,14 @@
-export async function sendRequest(method, url, headers, body, timeoutMs) {
+const activeRequests = new Map();
+
+export async function sendRequest(requestId, method, url, headers, body, timeoutMs, followRedirects) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs || 30000);
+    const request = { controller, cancelled: false, timedOut: false };
+    activeRequests.set(requestId, request);
+
+    const timeoutId = setTimeout(() => {
+        request.timedOut = true;
+        controller.abort();
+    }, timeoutMs || 30000);
 
     const start = performance.now();
     try {
@@ -9,7 +17,8 @@ export async function sendRequest(method, url, headers, body, timeoutMs) {
             headers: headers || {},
             signal: controller.signal,
             mode: "cors",
-            credentials: "omit"
+            credentials: "omit",
+            redirect: followRedirects === false ? "manual" : "follow"
         };
 
         if (body && method !== "GET" && method !== "HEAD") {
@@ -34,10 +43,14 @@ export async function sendRequest(method, url, headers, body, timeoutMs) {
             body: responseBody,
             responseTimeMs: elapsed,
             responseSizeBytes: new Blob([responseBody]).size,
-            errorMessage: null
+            errorMessage: null,
+            wasCancelled: false
         };
     } catch (e) {
         const elapsed = performance.now() - start;
+        const cancelled = request.cancelled === true;
+        const timedOut = request.timedOut === true;
+
         return {
             success: false,
             statusCode: 0,
@@ -46,9 +59,26 @@ export async function sendRequest(method, url, headers, body, timeoutMs) {
             body: "",
             responseTimeMs: elapsed,
             responseSizeBytes: 0,
-            errorMessage: e.name === "AbortError" ? `Request timed out after ${timeoutMs || 30000}ms` : e.message
+            errorMessage: cancelled
+                ? "Request cancelled."
+                : e.name === "AbortError" && timedOut
+                    ? `Request timed out after ${timeoutMs || 30000}ms`
+                    : e.message,
+            wasCancelled: cancelled
         };
     } finally {
         clearTimeout(timeoutId);
+        activeRequests.delete(requestId);
     }
+}
+
+export function cancelRequest(requestId) {
+    const request = activeRequests.get(requestId);
+    if (!request) {
+        return false;
+    }
+
+    request.cancelled = true;
+    request.controller.abort();
+    return true;
 }

@@ -1,0 +1,105 @@
+@using System.Text.Json.Nodes
+
+<div class="rk-json-line" style="padding-left:@(Depth * 16)px;">
+    @if (!string.IsNullOrWhiteSpace(PropertyName))
+    {
+        <span class="rk-json-key">@((MarkupString)Highlight(PropertyName!))</span>
+        <span class="rk-json-punctuation">: </span>
+    }
+
+    @if (Node is JsonObject jsonObject)
+    {
+        <span class="rk-json-brace">@("{")</span>
+        @foreach (var property in jsonObject)
+        {
+            <JsonTreeNode Node="@property.Value" PropertyName="@property.Key" Search="@Search" Depth="@(Depth + 1)" />
+        }
+        <div class="rk-json-line" style="padding-left:@(Depth * 16)px;">
+            <span class="rk-json-brace">@("}")</span>
+        </div>
+    }
+    else if (Node is JsonArray jsonArray)
+    {
+        <span class="rk-json-brace">[</span>
+        @for (var index = 0; index < jsonArray.Count; index++)
+        {
+            <JsonTreeNode Node="@jsonArray[index]" PropertyName="@($"[{index}]")" Search="@Search" Depth="@(Depth + 1)" />
+        }
+        <div class="rk-json-line" style="padding-left:@(Depth * 16)px;">
+            <span class="rk-json-brace">]</span>
+        </div>
+    }
+    else
+    {
+        <span class="rk-json-value @ValueClass(Node)">@((MarkupString)Highlight(FormatValue(Node)))</span>
+    }
+</div>
+
+@code {
+    [Parameter] public JsonNode? Node { get; set; }
+    [Parameter] public string? PropertyName { get; set; }
+    [Parameter] public string Search { get; set; } = string.Empty;
+    [Parameter] public int Depth { get; set; }
+
+    private static string ValueClass(JsonNode? node)
+    {
+        if (node is null)
+        {
+            return "rk-json-null";
+        }
+
+        var json = node.ToJsonString();
+        if (json == "true" || json == "false")
+        {
+            return "rk-json-boolean";
+        }
+
+        if (json == "null")
+        {
+            return "rk-json-null";
+        }
+
+        return node is JsonValue value && value.TryGetValue<string>(out _)
+            ? "rk-json-string"
+            : "rk-json-number";
+    }
+
+    private static string FormatValue(JsonNode? node)
+    {
+        if (node is null)
+        {
+            return "null";
+        }
+
+        return node.ToJsonString();
+    }
+
+    private string Highlight(string text)
+    {
+        if (string.IsNullOrWhiteSpace(Search))
+        {
+            return System.Net.WebUtility.HtmlEncode(text);
+        }
+
+        var encoded = new System.Text.StringBuilder();
+        var startIndex = 0;
+
+        while (startIndex < text.Length)
+        {
+            var matchIndex = text.IndexOf(Search, startIndex, StringComparison.OrdinalIgnoreCase);
+            if (matchIndex < 0)
+            {
+                encoded.Append(System.Net.WebUtility.HtmlEncode(text[startIndex..]));
+                break;
+            }
+
+            encoded.Append(System.Net.WebUtility.HtmlEncode(text[startIndex..matchIndex]));
+            encoded.Append("<mark>");
+            encoded.Append(System.Net.WebUtility.HtmlEncode(text.Substring(matchIndex, Search.Length)));
+            encoded.Append("</mark>");
+            startIndex = matchIndex + Search.Length;
+        }
+
+        return encoded.ToString();
+    }
+}

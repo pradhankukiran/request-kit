@@ -1,63 +1,135 @@
 @inject AppState App
+@inject ApiClientState ApiState
+@inject DiffState Diff
 @inject FileInterop FileExport
-@inject MonacoEditorInterop Monaco
 @implements IAsyncDisposable
 
 <div class="rk-response-viewer">
-    @if (IsLoading)
-    {
-        <div class="rk-loading" role="status" aria-label="Loading response">
-            <div class="rk-loading-spinner"></div>
-            <span>Sending request...</span>
-        </div>
-    }
-    else if (Response == null)
-    {
-        <div class="rk-empty-state">
-            <p style="font-weight:600;font-size:15px;color:var(--rk-text);">No response yet</p>
-            <p style="color:var(--rk-text-secondary);">Send a request to see the response here.</p>
-            <p style="font-size:12px;color:var(--rk-text-muted);margin-top:8px;">
-                <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Ctrl</kbd> + <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Enter</kbd> to send
-            </p>
-        </div>
-    }
-    else
-    {
+    <div class="rk-response-content @(IsLoading ? "is-loading" : "")">
         <div class="rk-response-header">
-            <span class="rk-status-badge rk-status-@StatusClass">@Response.StatusCode @Response.StatusText</span>
-            <span class="rk-response-meta">@Response.ResponseTimeMs.ToString("F0") ms</span>
-            <span class="rk-response-meta">@FormatSize(Response.ResponseSizeBytes)</span>
+            <span class="rk-status-badge rk-status-@StatusClass">@StatusLabel</span>
+            <span class="rk-response-meta">@ResponseTimeLabel</span>
+            <span class="rk-response-meta">@ResponseSizeLabel</span>
         </div>
 
         <div class="rk-tab-bar rk-tab-bar-sm">
             <button class="rk-tab @ViewTabClass("body")" @onclick="@(() => SetViewTab("body"))">Body</button>
-            <button class="rk-tab @ViewTabClass("headers")" @onclick="@(() => SetViewTab("headers"))">Headers (@Response.Headers.Count)</button>
+            <button class="rk-tab @ViewTabClass("headers")" @onclick="@(() => SetViewTab("headers"))">Headers (@HeaderCount)</button>
         </div>
 
         @if (_viewTab == "body")
         {
+            <div class="rk-response-controls">
+                <div class="rk-response-view-tabs">
+                    <button class="rk-tab rk-tab-sm @BodyViewClass("raw")" @onclick="@(() => SetBodyView("raw"))" disabled="@(!HasResponse)">Raw</button>
+                    <button class="rk-tab rk-tab-sm @BodyViewClass("pretty")" @onclick="@(() => SetBodyView("pretty"))" disabled="@(!HasResponse)">Pretty</button>
+                    <button class="rk-tab rk-tab-sm @BodyViewClass("preview")" @onclick="@(() => SetBodyView("preview"))" disabled="@(!CanPreview)">Preview</button>
+                </div>
+
+                <div class="rk-response-search">
+                    <input class="rk-input rk-response-search-input"
+                           type="text"
+                           value="@_bodySearch"
+                           @oninput="e => _bodySearch = e.Value?.ToString() ?? string.Empty"
+                           placeholder="Search response body"
+                           disabled="@(!HasResponse)" />
+                    @if (!string.IsNullOrWhiteSpace(_bodySearch))
+                    {
+                        <span class="rk-response-search-meta">@SearchStatusText</span>
+                    }
+                </div>
+            </div>
+
             <div class="rk-response-actions">
-                <button class="rk-btn rk-btn-sm" @onclick="SendToRegex">Send to Regex</button>
-                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(true)">Diff Left</button>
-                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(false)">Diff Right</button>
-                <button class="rk-btn rk-btn-sm" @onclick="CopyBody">@(_copySuccess ? "Copied!" : "Copy")</button>
+                <button class="rk-btn rk-btn-sm" @onclick="SendToRegex" disabled="@(!HasResponse)">Send to Regex</button>
+                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(true)" disabled="@(!HasResponse)">Diff Left</button>
+                <button class="rk-btn rk-btn-sm" @onclick="() => SendToDiff(false)" disabled="@(!HasResponse)">Diff Right</button>
+                <button class="rk-btn rk-btn-sm" @onclick="CopyBody" disabled="@(!HasResponse)">@(_copySuccess ? "Copied!" : "Copy")</button>
+                <button class="rk-btn rk-btn-sm" @onclick="DownloadBody" disabled="@(!HasResponse)">Download</button>
             </div>
-            <div class="rk-response-body" style="position:relative;">
-                <div id="response-editor" class="rk-editor-container"></div>
-            </div>
+
+            @if (!HasResponse)
+            {
+                <div class="rk-response-body">
+                    <div class="rk-empty-state">
+                        <p style="font-weight:600;font-size:15px;color:var(--rk-text);">No response yet</p>
+                        <p style="color:var(--rk-text-secondary);">
+                            @(ApiState.Requests.Count == 0
+                                ? "Create or load a request first. Responses, headers, and tools will appear here."
+                                : "Send the selected request to inspect the response here.")
+                        </p>
+                        <p style="font-size:12px;color:var(--rk-text-muted);margin-top:8px;">
+                            <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Ctrl</kbd> + <kbd style="padding:2px 6px;background:var(--rk-surface);border:1px solid var(--rk-border);border-radius:0;font-family:var(--rk-font-sans);font-size:11px;">Enter</kbd> to send
+                        </p>
+                    </div>
+                </div>
+            }
+            else
+            {
+                @switch (_bodyView)
+                {
+                    case "preview" when Response!.DetectedContentType == ContentType.Json:
+                        <div class="rk-response-body rk-response-preview">
+                            <JsonTreeView Json="@Response.Body" Search="@_bodySearch" />
+                        </div>
+                        break;
+                    case "preview" when Response!.DetectedContentType == ContentType.Html:
+                        <div class="rk-response-body rk-response-preview">
+                            @if (!string.IsNullOrWhiteSpace(_bodySearch))
+                            {
+                                <div class="rk-response-preview-note">Search highlights are available in Raw and Pretty views. HTML preview stays rendered.</div>
+                            }
+                            <iframe class="rk-response-preview-frame" sandbox="" srcdoc="@Response.Body"></iframe>
+                        </div>
+                        break;
+                    case "preview":
+                        <div class="rk-empty-state rk-preview-empty">
+                            <p style="font-weight:600;color:var(--rk-text);">Preview unavailable</p>
+                            <p style="color:var(--rk-text-secondary);">Use Raw or Pretty for this response type.</p>
+                        </div>
+                        break;
+                    default:
+                        <div class="rk-response-body rk-response-body-fallback">
+                            <pre class="rk-response-pre">@HighlightedBody</pre>
+                        </div>
+                        break;
+                }
+            }
         }
         else
         {
-            <div class="rk-response-headers-list">
-                @foreach (var h in Response.Headers)
-                {
-                    <div class="rk-header-row">
-                        <span class="rk-header-key">@h.Key</span>
-                        <span class="rk-header-value">@h.Value</span>
+            @if (!HasResponse)
+            {
+                <div class="rk-response-headers-list">
+                    <div class="rk-empty-state">
+                        <p style="font-weight:600;color:var(--rk-text);">No headers yet</p>
+                        <p style="color:var(--rk-text-secondary);">Send the selected request to inspect response headers here.</p>
                     </div>
-                }
-            </div>
+                </div>
+            }
+            else
+            {
+                <div class="rk-response-headers-list">
+                    @foreach (var header in Response!.Headers)
+                    {
+                        <div class="rk-header-row">
+                            <span class="rk-header-key">@header.Key</span>
+                            <span class="rk-header-value">@header.Value</span>
+                        </div>
+                    }
+                </div>
+            }
         }
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="rk-response-loading-overlay" role="status" aria-label="Loading response">
+            <div class="rk-loading">
+                <div class="rk-loading-spinner"></div>
+                <span>Sending request...</span>
+            </div>
+        </div>
     }
 </div>
 
@@ -66,23 +138,23 @@
     [Parameter] public bool IsLoading { get; set; }
 
     private string _viewTab = "body";
+    private string _bodyView = "pretty";
+    private string _bodySearch = string.Empty;
     private bool _copySuccess;
     private CancellationTokenSource? _copyCts;
-    private ResponseData? _lastRenderedResponse;
-    private bool _editorCreated;
+    private DateTime _lastResponseAt;
 
     private string ViewTabClass(string tab) => _viewTab == tab ? "active" : "";
-    private void SetViewTab(string tab)
-    {
-        if (tab != "body") _editorCreated = false;
-        _viewTab = tab;
-    }
+    private void SetViewTab(string tab) => _viewTab = tab;
+
+    private string BodyViewClass(string tab) => _bodyView == tab ? "active" : "";
 
     private string StatusClass
     {
         get
         {
             var code = Response?.StatusCode ?? 0;
+            if (Response is null) return "error";
             if (code >= 200 && code < 300) return "success";
             if (code >= 300 && code < 400) return "redirect";
             if (code >= 400 && code < 500) return "client-error";
@@ -91,61 +163,108 @@
         }
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (Response != null && _viewTab == "body")
-        {
-            var body = FormatBody(Response.Body, Response.DetectedContentType);
-            var language = MapContentTypeToLanguage(Response.DetectedContentType);
+    private bool HasResponse => Response is not null;
 
-            if (!_editorCreated)
-            {
-                try
-                {
-                    await Monaco.CreateEditorAsync("response-editor", body, language, readOnly: true);
-                    _editorCreated = true;
-                    _lastRenderedResponse = Response;
-                }
-                catch { /* editor container may not be in DOM yet */ }
-            }
-            else if (Response != _lastRenderedResponse)
-            {
-                try
-                {
-                    await Monaco.SetValueAsync("response-editor", body);
-                    await Monaco.SetLanguageAsync("response-editor", language);
-                    _lastRenderedResponse = Response;
-                }
-                catch { }
-            }
+    private bool CanPreview =>
+        HasResponse && Response!.DetectedContentType is ContentType.Json or ContentType.Html;
+
+    private string StatusLabel =>
+        Response is null
+            ? "Ready"
+            : $"{Response.StatusCode} {Response.StatusText}";
+
+    private string ResponseTimeLabel =>
+        Response is null
+            ? "0 ms"
+            : $"{Response.ResponseTimeMs:F0} ms";
+
+    private string ResponseSizeLabel =>
+        Response is null
+            ? "0 B"
+            : FormatSize(Response.ResponseSizeBytes);
+
+    private int HeaderCount => Response?.Headers.Count ?? 0;
+
+    private string PrettyBody =>
+        Response is null
+            ? string.Empty
+            : FormatPrettyBody(Response.Body, Response.DetectedContentType);
+
+    private string SearchableBody => _bodyView == "raw"
+        ? Response?.Body ?? string.Empty
+        : PrettyBody;
+
+    private MarkupString HighlightedBody => new(HighlightText(SearchableBody, _bodySearch));
+
+    private string SearchStatusText
+    {
+        get
+        {
+            var matches = CountMatches(SearchableBody, _bodySearch);
+            return matches == 0 ? "No matches" : $"{matches} match{(matches == 1 ? string.Empty : "es")}";
         }
     }
 
-    private static string MapContentTypeToLanguage(ContentType type) => type switch
+    protected override void OnParametersSet()
     {
-        ContentType.Json => "json",
-        ContentType.Xml => "xml",
-        ContentType.Html => "html",
-        _ => "plaintext"
-    };
+        var responseAt = Response?.ReceivedAt ?? DateTime.MinValue;
+        if (responseAt == _lastResponseAt)
+        {
+            return;
+        }
+
+        _lastResponseAt = responseAt;
+        _viewTab = "body";
+        _bodyView = Response?.DetectedContentType == ContentType.Html ? "preview" : "pretty";
+        _bodySearch = string.Empty;
+        _copySuccess = false;
+    }
+
+    private void SetBodyView(string tab)
+    {
+        if (tab == "preview" && !CanPreview)
+        {
+            return;
+        }
+
+        _bodyView = tab;
+    }
 
     private void SendToRegex()
     {
-        if (Response != null)
+        if (Response is null)
         {
-            App.SetLastResponse(Response.Body, Response.DetectedContentType);
-            App.SetMode(ToolMode.RegexBuilder);
+            return;
         }
+
+        App.SetLastResponse(Response.Body, Response.DetectedContentType);
+        App.SetMode(ToolMode.RegexBuilder);
     }
 
     private void SendToDiff(bool isLeft)
     {
+        if (Response == null)
+        {
+            return;
+        }
+
+        var updatedLeft = isLeft ? Response.Body : Diff.LeftText;
+        var updatedRight = isLeft ? Diff.RightText : Response.Body;
+
+        Diff.SetLeftText(updatedLeft);
+        Diff.SetRightText(updatedRight);
+        Diff.SetResult(DiffEngine.ComputeDiff(updatedLeft, updatedRight));
+        App.SetLastResponse(Response.Body, Response.DetectedContentType);
         App.SetMode(ToolMode.DiffViewer);
     }
 
     private async Task CopyBody()
     {
-        if (Response == null) return;
+        if (Response == null)
+        {
+            return;
+        }
+
         try
         {
             _copyCts?.Cancel();
@@ -160,36 +279,121 @@
             _copySuccess = false;
             await InvokeAsync(StateHasChanged);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException)
+        {
+        }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Copy failed: {ex.Message}");
         }
     }
 
+    private async Task DownloadBody()
+    {
+        if (Response is null)
+        {
+            return;
+        }
+
+        var (filename, mimeType) = GetDownloadMetadata(Response.DetectedContentType, Response.ReceivedAt);
+        await FileExport.DownloadTextAsync(filename, Response.Body, mimeType);
+    }
+
     public async ValueTask DisposeAsync()
     {
         _copyCts?.Cancel();
         _copyCts?.Dispose();
-        if (_editorCreated)
+        await ValueTask.CompletedTask;
+    }
+
+    private static string FormatPrettyBody(string body, ContentType type)
+    {
+        if (string.IsNullOrWhiteSpace(body))
         {
-            try { await Monaco.DisposeEditorAsync("response-editor"); }
-            catch { }
+            return string.Empty;
+        }
+
+        try
+        {
+            return type switch
+            {
+                ContentType.Json => System.Text.Json.JsonSerializer.Serialize(
+                    System.Text.Json.JsonDocument.Parse(body),
+                    new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
+                ContentType.Xml => System.Xml.Linq.XDocument.Parse(body).ToString(),
+                _ => body
+            };
+        }
+        catch
+        {
+            return body;
         }
     }
 
-    private static string FormatBody(string body, ContentType type)
+    private static string HighlightText(string text, string search)
     {
-        if (type == ContentType.Json)
+        if (string.IsNullOrWhiteSpace(search))
         {
-            try
-            {
-                var doc = System.Text.Json.JsonDocument.Parse(body);
-                return System.Text.Json.JsonSerializer.Serialize(doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
-            }
-            catch { return body; }
+            return System.Net.WebUtility.HtmlEncode(text);
         }
-        return body;
+
+        var encoded = new System.Text.StringBuilder();
+        var startIndex = 0;
+
+        while (startIndex < text.Length)
+        {
+            var matchIndex = text.IndexOf(search, startIndex, StringComparison.OrdinalIgnoreCase);
+            if (matchIndex < 0)
+            {
+                encoded.Append(System.Net.WebUtility.HtmlEncode(text[startIndex..]));
+                break;
+            }
+
+            encoded.Append(System.Net.WebUtility.HtmlEncode(text[startIndex..matchIndex]));
+            encoded.Append("<mark>");
+            encoded.Append(System.Net.WebUtility.HtmlEncode(text.Substring(matchIndex, search.Length)));
+            encoded.Append("</mark>");
+            startIndex = matchIndex + search.Length;
+        }
+
+        return encoded.ToString();
+    }
+
+    private static int CountMatches(string text, string search)
+    {
+        if (string.IsNullOrWhiteSpace(search))
+        {
+            return 0;
+        }
+
+        var count = 0;
+        var startIndex = 0;
+        while (startIndex < text.Length)
+        {
+            var matchIndex = text.IndexOf(search, startIndex, StringComparison.OrdinalIgnoreCase);
+            if (matchIndex < 0)
+            {
+                break;
+            }
+
+            count++;
+            startIndex = matchIndex + search.Length;
+        }
+
+        return count;
+    }
+
+    private static (string Filename, string MimeType) GetDownloadMetadata(ContentType type, DateTime receivedAt)
+    {
+        var stamp = receivedAt == default ? DateTime.UtcNow : receivedAt;
+        var suffix = stamp.ToString("yyyyMMdd-HHmmss");
+        return type switch
+        {
+            ContentType.Json => ($"response-{suffix}.json", "application/json"),
+            ContentType.Xml => ($"response-{suffix}.xml", "application/xml"),
+            ContentType.Html => ($"response-{suffix}.html", "text/html"),
+            _ => ($"response-{suffix}.txt", "text/plain")
+        };
     }
 
     private static string FormatSize(long bytes)

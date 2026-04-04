@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @inject ApiClientState ApiState
+@inject AppState App
 
 <div class="rk-history-panel">
     @if (!ApiState.History.Any())
@@ -13,17 +14,22 @@
     {
         <div class="rk-history-list">
             <Virtualize Items="@ApiState.History" Context="entry">
-                <button type="button" class="rk-history-item" @key="entry.Id" @onclick="() => LoadHistoryEntry(entry)">
-                    <span class="rk-method rk-method-@entry.Method.ToString().ToLower()">@entry.Method</span>
-                    <div class="rk-history-details">
-                        <span class="rk-history-url" title="@entry.Url">@TruncateUrl(entry.Url)</span>
-                        <div class="rk-history-meta">
-                            <span class="rk-history-status @StatusClass(entry.StatusCode)">@entry.StatusCode</span>
-                            <span class="rk-history-time">@FormatTime(entry.ResponseTimeMs)</span>
-                            <span class="rk-history-timestamp">@FormatTimestamp(entry.Timestamp)</span>
+                <div class="rk-history-row" @key="entry.Id">
+                    <button type="button" class="rk-history-item" @onclick="() => LoadHistoryEntry(entry)">
+                        <span class="rk-method rk-method-@entry.Method.ToString().ToLower()">@entry.Method</span>
+                        <div class="rk-history-details">
+                            <span class="rk-history-url" title="@entry.Url">@TruncateUrl(entry.Url)</span>
+                            <div class="rk-history-meta">
+                                <span class="rk-history-status @StatusClass(entry.StatusCode)">@entry.StatusCode</span>
+                                <span class="rk-history-time">@FormatTime(entry.ResponseTimeMs)</span>
+                                <span class="rk-history-timestamp">@FormatTimestamp(entry.Timestamp)</span>
+                            </div>
                         </div>
+                    </button>
+                    <div class="rk-history-actions">
+                        <button type="button" class="rk-tree-action" title="Restore as new request" @onclick="() => RestoreHistoryCopy(entry)">Copy</button>
                     </div>
-                </button>
+                </div>
             </Virtualize>
         </div>
     }
@@ -32,13 +38,34 @@
 @code {
     private void LoadHistoryEntry(HistoryEntry entry)
     {
-        var request = new RequestDefinition
-        {
-            Name = !string.IsNullOrEmpty(entry.RequestName) ? entry.RequestName : "From History",
-            Method = entry.Method,
-            Url = entry.Url
-        };
+        var request = RequestUrlSynchronizer.SyncParamsFromUrl(RequestSnapshotSerializer.DeserializeRequest(entry.RequestSnapshot)
+            ?? new RequestDefinition
+            {
+                Name = !string.IsNullOrEmpty(entry.RequestName) ? entry.RequestName : "From History",
+                Method = entry.Method,
+                Url = entry.Url
+            });
         ApiState.SetActiveRequest(request);
+
+        var response = RequestSnapshotSerializer.DeserializeResponse(entry.ResponseSnapshot);
+        if (response is not null)
+        {
+            ApiState.SetResponse(response);
+            App.SetLastResponse(response.Body, response.DetectedContentType);
+        }
+    }
+
+    private void RestoreHistoryCopy(HistoryEntry entry)
+    {
+        var target = GetPreferredTarget();
+        ApiState.RestoreHistoryEntryAsCopy(entry, target.CollectionId, target.FolderId);
+
+        var response = RequestSnapshotSerializer.DeserializeResponse(entry.ResponseSnapshot);
+        if (response is not null)
+        {
+            ApiState.SetResponse(response);
+            App.SetLastResponse(response.Body, response.DetectedContentType);
+        }
     }
 
     private string TruncateUrl(string url)
@@ -73,4 +100,30 @@
         >= 500 => "rk-status-code-server-error",
         _ => "rk-status-code-none"
     };
+
+    private (string CollectionId, string? FolderId) GetPreferredTarget()
+    {
+        if (!string.IsNullOrWhiteSpace(ApiState.SelectedRequestId))
+        {
+            var location = ApiState.GetRequestLocation(ApiState.SelectedRequestId);
+            if (location is not null)
+            {
+                return location.Value;
+            }
+        }
+
+        var collection = ApiState.Collections.FirstOrDefault();
+        if (collection is not null)
+        {
+            return (collection.Id, null);
+        }
+
+        var createdCollection = new Collection
+        {
+            Name = "Imported Requests"
+        };
+
+        ApiState.AddCollection(createdCollection);
+        return (createdCollection.Id, null);
+    }
 }

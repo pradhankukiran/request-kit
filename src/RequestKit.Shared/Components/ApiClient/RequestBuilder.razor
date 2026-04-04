@@ -1,7 +1,7 @@
 @inject ApiClientState ApiState
 @inject AppState App
 @inject HttpFetchInterop Fetch
-@inject MonacoEditorInterop Monaco
+@inject FileInterop FileExport
 @implements IDisposable
 
 <div class="rk-api-client-layout">
@@ -34,38 +34,134 @@
                         <line x1="5.5" y1="2" x2="5.5" y2="14" />
                     </svg>
                 </button>
+                <input class="rk-input rk-request-name-input"
+                       type="text"
+                       value="@ApiState.ActiveRequest.Name"
+                       @oninput="e => UpdateName(e.Value?.ToString() ?? string.Empty)"
+                       placeholder="Request name" />
+                <div class="rk-request-toolbar-actions">
+                    <button class="rk-btn rk-btn-sm" @onclick="OpenCurlImport">Import cURL</button>
+                    <button class="rk-btn rk-btn-sm" @onclick="OpenCurlExport" disabled="@(!CanExportCurl)">Export cURL</button>
+                </div>
             </div>
+
             <UrlBar Method="@ApiState.ActiveRequest.Method"
                     Url="@ApiState.ActiveRequest.Url"
                     IsLoading="@ApiState.IsLoading"
                     OnMethodChanged="UpdateMethod"
                     OnUrlChanged="UpdateUrl"
-                    OnSend="SendRequest" />
+                    OnSend="SendRequest"
+                    OnCancel="CancelRequest" />
 
-            <div class="rk-tab-bar" role="tablist">
-                <button class="rk-tab @TabClass("params")" role="tab" aria-selected="@(_activeTab == "params")" @onclick="@(() => SetTab("params"))">Params</button>
-                <button class="rk-tab @TabClass("headers")" role="tab" aria-selected="@(_activeTab == "headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
-                <button class="rk-tab @TabClass("body")" role="tab" aria-selected="@(_activeTab == "body")" @onclick="@(() => SetTab("body"))">Body</button>
-                <button class="rk-tab @TabClass("auth")" role="tab" aria-selected="@(_activeTab == "auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
-            </div>
+            @if (_showCurlImport || _showCurlExport)
+            {
+                <div class="rk-request-drawer">
+                    <div class="rk-request-drawer-header">
+                        <div>
+                            <div class="rk-settings-title">@(_showCurlImport ? "Import cURL" : "Export cURL")</div>
+                            <div class="rk-settings-subtitle">
+                                @(_showCurlImport
+                                    ? "Paste a cURL command to create a new request alongside the current selection."
+                                    : "Review the generated command, then copy or download it.")
+                            </div>
+                        </div>
+                        <button type="button" class="rk-btn-icon" @onclick="CloseCurlPanel" title="Close">
+                            x
+                        </button>
+                    </div>
 
-            <div class="rk-tab-content">
-                @switch (_activeTab)
-                {
-                    case "params":
-                        <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
-                        break;
-                    case "headers":
-                        <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
-                        break;
-                    case "body":
-                        <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
-                        break;
-                    case "auth":
-                        <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
-                        break;
-                }
-            </div>
+                    <textarea class="rk-textarea rk-curl-textarea"
+                              value="@_curlBuffer"
+                              readonly="@_showCurlExport"
+                              @oninput="e => _curlBuffer = e.Value?.ToString() ?? string.Empty"
+                              placeholder="curl https://api.example.com/items -H 'Accept: application/json'"></textarea>
+
+                    @if (!string.IsNullOrWhiteSpace(_curlError))
+                    {
+                        <div class="rk-error-banner rk-inline-banner">@_curlError</div>
+                    }
+
+                    <div class="rk-request-drawer-actions">
+                        @if (_showCurlImport)
+                        {
+                            <button class="rk-btn rk-btn-primary" @onclick="ImportCurl">Import Request</button>
+                        }
+                        else
+                        {
+                            <button class="rk-btn rk-btn-primary" @onclick="CopyCurl">@(_curlCopied ? "Copied!" : "Copy Command")</button>
+                            <button class="rk-btn" @onclick="DownloadCurl">Download</button>
+                        }
+
+                        <button class="rk-btn" @onclick="CloseCurlPanel">Close</button>
+                    </div>
+                </div>
+            }
+
+            @if (ShowApiOnboarding)
+            {
+                <div class="rk-api-onboarding">
+                    <div class="rk-api-onboarding-hero">
+                        <div class="rk-api-onboarding-eyebrow">API Client</div>
+                        <h2 class="rk-api-onboarding-title">Start with a real request, not a blank shell.</h2>
+                        <p class="rk-api-onboarding-copy">
+                            Build a request manually, load a starter example, import a cURL command, or set up environments
+                            before you send traffic.
+                        </p>
+                        <div class="rk-api-onboarding-actions">
+                            <button class="rk-btn rk-btn-primary" @onclick="CreateBlankRequest">Create Request</button>
+                            <button class="rk-btn" @onclick="LoadExampleRequest">Load Example</button>
+                            <button class="rk-btn" @onclick="OpenCurlImport">Import cURL</button>
+                            <button class="rk-btn" @onclick="OpenSettings">Open Settings</button>
+                        </div>
+                    </div>
+
+                    <div class="rk-api-onboarding-grid">
+                        <div class="rk-api-onboarding-card">
+                            <div class="rk-api-onboarding-card-title">Organize as you go</div>
+                            <div class="rk-api-onboarding-card-copy">Requests land inside collections and folders so the sidebar becomes useful immediately.</div>
+                        </div>
+                        <div class="rk-api-onboarding-card">
+                            <div class="rk-api-onboarding-card-title">Use environment variables</div>
+                            <div class="rk-api-onboarding-card-copy">Define values once and reference them with <code>{{baseUrl}}</code>, tokens, or custom headers.</div>
+                        </div>
+                        <div class="rk-api-onboarding-card">
+                            <div class="rk-api-onboarding-card-title">Inspect and branch</div>
+                            <div class="rk-api-onboarding-card-copy">Responses can flow straight into regex testing or diffing once you start sending requests.</div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="rk-tab-bar" role="tablist">
+                    <button class="rk-tab @TabClass("params")" role="tab" aria-selected="@(_activeTab == "params")" @onclick="@(() => SetTab("params"))">Params</button>
+                    <button class="rk-tab @TabClass("headers")" role="tab" aria-selected="@(_activeTab == "headers")" @onclick="@(() => SetTab("headers"))">Headers</button>
+                    <button class="rk-tab @TabClass("body")" role="tab" aria-selected="@(_activeTab == "body")" @onclick="@(() => SetTab("body"))">Body</button>
+                    <button class="rk-tab @TabClass("auth")" role="tab" aria-selected="@(_activeTab == "auth")" @onclick="@(() => SetTab("auth"))">Auth</button>
+                    <button class="rk-tab @TabClass("settings")" role="tab" aria-selected="@(_activeTab == "settings")" @onclick="@(() => SetTab("settings"))">Settings</button>
+                </div>
+
+                <div class="rk-tab-content">
+                    @switch (_activeTab)
+                    {
+                        case "params":
+                            <KeyValueEditor Entries="@ApiState.ActiveRequest.QueryParams" OnChanged="UpdateParams" Placeholder="param" />
+                            break;
+                        case "headers":
+                            <KeyValueEditor Entries="@ApiState.ActiveRequest.Headers" OnChanged="UpdateHeaders" Placeholder="header" />
+                            break;
+                        case "body":
+                            <BodyEditor Body="@ApiState.ActiveRequest.Body" OnChanged="UpdateBody" />
+                            break;
+                        case "auth":
+                            <AuthPanel Auth="@ApiState.ActiveRequest.Auth" OnChanged="UpdateAuth" />
+                            break;
+                        case "settings":
+                            <ApiClientSettingsPanel />
+                            break;
+                    }
+                </div>
+            }
         </div>
 
         <div class="rk-response-section">
@@ -78,6 +174,12 @@
     private string _activeTab = "params";
     private string _sidebarTab = "collections";
     private bool _sidebarOpen = true;
+    private string? _activeRequestId;
+    private bool _showCurlImport;
+    private bool _showCurlExport;
+    private string _curlBuffer = string.Empty;
+    private string? _curlError;
+    private bool _curlCopied;
 
     private string TabClass(string tab) => _activeTab == tab ? "active" : "";
     private void SetTab(string tab) => _activeTab = tab;
@@ -86,17 +188,45 @@
     private void SetSidebarTab(string tab) => _sidebarTab = tab;
     private void ToggleSidebar() => _sidebarOpen = !_sidebarOpen;
 
-    protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
-    public void Dispose() => ApiState.OnChange -= StateHasChanged;
+    private bool ShowApiOnboarding => !ApiState.Requests.Any() && !HasMeaningfulDraft();
+    private bool CanExportCurl => !string.IsNullOrWhiteSpace(ApiState.ActiveRequest.Url);
+
+    protected override void OnInitialized()
+    {
+        ApiState.OnChange += HandleStateChanged;
+        TrySelectFirstRequest();
+    }
+
+    public void Dispose() => ApiState.OnChange -= HandleStateChanged;
+
+    private void HandleStateChanged()
+    {
+        if (ApiState.SelectedRequestId is null && ApiState.Requests.Count > 0)
+        {
+            TrySelectFirstRequest();
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    private void UpdateName(string name) =>
+        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Name = name });
 
     private void UpdateMethod(HttpMethod method) =>
         ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Method = method });
 
-    private void UpdateUrl(string url) =>
-        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Url = url });
+    private void UpdateUrl(string url)
+    {
+        var request = RequestUrlSynchronizer.SyncParamsFromUrl(ApiState.ActiveRequest with { Url = url });
+        ApiState.UpdateActiveRequest(request);
+    }
 
-    private void UpdateParams(List<KeyValueEntry> entries) =>
-        ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { QueryParams = entries });
+    private void UpdateParams(List<KeyValueEntry> entries)
+    {
+        var request = RequestUrlSynchronizer.SyncUrlFromParams(ApiState.ActiveRequest with { QueryParams = entries });
+        ApiState.UpdateActiveRequest(request);
+    }
 
     private void UpdateHeaders(List<KeyValueEntry> entries) =>
         ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Headers = entries });
@@ -107,91 +237,251 @@
     private void UpdateAuth(AuthConfig auth) =>
         ApiState.UpdateActiveRequest(ApiState.ActiveRequest with { Auth = auth });
 
+    private void CreateBlankRequest()
+    {
+        var target = GetPreferredTarget();
+        var request = new RequestDefinition
+        {
+            Name = "New Request"
+        };
+
+        ApiState.AddRequest(request, target.CollectionId, target.FolderId);
+        ApiState.SetActiveRequest(request);
+    }
+
+    private void LoadExampleRequest()
+    {
+        var target = GetPreferredTarget();
+        var request = RequestUrlSynchronizer.SyncParamsFromUrl(new RequestDefinition
+        {
+            Name = "Example GET Request",
+            Url = "https://jsonplaceholder.typicode.com/todos/1",
+            Headers =
+            [
+                new KeyValueEntry
+                {
+                    Key = "Accept",
+                    Value = "application/json"
+                }
+            ]
+        });
+
+        ApiState.AddRequest(request, target.CollectionId, target.FolderId);
+        ApiState.SetActiveRequest(request);
+    }
+
+    private void OpenSettings() => _activeTab = "settings";
+
+    private void OpenCurlImport()
+    {
+        _showCurlImport = true;
+        _showCurlExport = false;
+        _curlBuffer = string.Empty;
+        _curlError = null;
+        _curlCopied = false;
+    }
+
+    private void OpenCurlExport()
+    {
+        _showCurlImport = false;
+        _showCurlExport = true;
+        _curlBuffer = CurlCommandService.Export(ApiState.ActiveRequest);
+        _curlError = null;
+        _curlCopied = false;
+    }
+
+    private void CloseCurlPanel()
+    {
+        _showCurlImport = false;
+        _showCurlExport = false;
+        _curlBuffer = string.Empty;
+        _curlError = null;
+        _curlCopied = false;
+    }
+
+    private void ImportCurl()
+    {
+        if (!CurlCommandService.TryImport(_curlBuffer, out var request, out var error))
+        {
+            _curlError = error;
+            return;
+        }
+
+        var target = GetPreferredTarget();
+        ApiState.AddRequest(request, target.CollectionId, target.FolderId);
+        ApiState.SetActiveRequest(request);
+        _activeTab = "params";
+        CloseCurlPanel();
+    }
+
+    private async Task CopyCurl()
+    {
+        if (string.IsNullOrWhiteSpace(_curlBuffer))
+        {
+            return;
+        }
+
+        await FileExport.CopyToClipboardAsync(_curlBuffer);
+        _curlCopied = true;
+    }
+
+    private async Task DownloadCurl()
+    {
+        if (string.IsNullOrWhiteSpace(_curlBuffer))
+        {
+            return;
+        }
+
+        await FileExport.DownloadTextAsync($"{BuildFileName(ApiState.ActiveRequest.Name, "request")}.sh", _curlBuffer, "text/x-shellscript");
+    }
+
     private async Task SendRequest()
     {
         var req = ApiState.ActiveRequest;
-        if (string.IsNullOrWhiteSpace(req.Url)) return;
+        if (string.IsNullOrWhiteSpace(req.Url))
+        {
+            return;
+        }
 
+        var requestId = Guid.NewGuid().ToString("N");
+        _activeRequestId = requestId;
         ApiState.SetLoading(true);
+
+        ResponseData? response = null;
+        var shouldRecordHistory = true;
+
         try
         {
-            // Build URL with query params
-            var url = req.Url;
-            var activeParams = req.QueryParams.Where(p => p.Enabled && !string.IsNullOrEmpty(p.Key)).ToList();
-            if (activeParams.Count > 0)
-            {
-                var sep = url.Contains('?') ? "&" : "?";
-                url += sep + string.Join("&", activeParams.Select(p =>
-                    $"{Uri.EscapeDataString(p.Key)}={Uri.EscapeDataString(p.Value)}"));
-            }
-
-            // Resolve environment variables
             var env = ApiState.ActiveEnvironment;
-            if (env != null)
+            var vars = env?.Variables
+                .Where(v => v.Enabled && !string.IsNullOrEmpty(v.Key))
+                .GroupBy(v => v.Key)
+                .ToDictionary(g => g.Key, g => g.Last().Value)
+                ?? new Dictionary<string, string>();
+
+            var url = EnvironmentVariableResolver.Resolve(req.Url, vars);
+
+            var headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var header in req.Headers.Where(header => header.Enabled && !string.IsNullOrEmpty(header.Key)))
             {
-                var vars = env.Variables.Where(v => v.Enabled)
-                    .ToDictionary(v => v.Key, v => v.Value);
-                url = EnvironmentVariableResolver.Resolve(url, vars);
+                var headerKey = EnvironmentVariableResolver.Resolve(header.Key, vars);
+                if (string.IsNullOrWhiteSpace(headerKey))
+                {
+                    continue;
+                }
+
+                headers[headerKey] = EnvironmentVariableResolver.Resolve(header.Value, vars);
             }
 
-            // Build headers
-            var headers = new Dictionary<string, string>();
-            foreach (var h in req.Headers.Where(h => h.Enabled && !string.IsNullOrEmpty(h.Key)))
-                headers[h.Key] = h.Value;
-
-            // Add auth headers
             switch (req.Auth.Type)
             {
                 case AuthType.BearerToken:
-                    headers["Authorization"] = $"Bearer {req.Auth.Token}";
+                    headers["Authorization"] = $"Bearer {EnvironmentVariableResolver.Resolve(req.Auth.Token, vars)}";
                     break;
                 case AuthType.BasicAuth:
                     var encoded = Convert.ToBase64String(
-                        System.Text.Encoding.UTF8.GetBytes($"{req.Auth.Username}:{req.Auth.Password}"));
+                        System.Text.Encoding.UTF8.GetBytes(
+                            $"{EnvironmentVariableResolver.Resolve(req.Auth.Username, vars)}:{EnvironmentVariableResolver.Resolve(req.Auth.Password, vars)}"));
                     headers["Authorization"] = $"Basic {encoded}";
                     break;
                 case AuthType.ApiKeyHeader:
-                    headers[req.Auth.ApiKeyName] = req.Auth.ApiKeyValue;
+                    var apiKeyHeaderName = EnvironmentVariableResolver.Resolve(req.Auth.ApiKeyName, vars);
+                    if (!string.IsNullOrWhiteSpace(apiKeyHeaderName))
+                    {
+                        headers[apiKeyHeaderName] = EnvironmentVariableResolver.Resolve(req.Auth.ApiKeyValue, vars);
+                    }
+                    break;
+                case AuthType.ApiKeyQueryParam:
+                    var queryKey = EnvironmentVariableResolver.Resolve(req.Auth.ApiKeyName, vars);
+                    var queryValue = EnvironmentVariableResolver.Resolve(req.Auth.ApiKeyValue, vars);
+                    url = RequestUrlSynchronizer.AppendQueryParameter(url, queryKey, queryValue);
                     break;
                 case AuthType.CustomHeader:
-                    headers[req.Auth.CustomHeaderName] = req.Auth.CustomHeaderValue;
+                    var customHeaderName = EnvironmentVariableResolver.Resolve(req.Auth.CustomHeaderName, vars);
+                    if (!string.IsNullOrWhiteSpace(customHeaderName))
+                    {
+                        headers[customHeaderName] = EnvironmentVariableResolver.Resolve(req.Auth.CustomHeaderValue, vars);
+                    }
                     break;
             }
 
-            // Build body
             string? body = null;
             if (req.Method != HttpMethod.GET && req.Method != HttpMethod.HEAD)
             {
                 switch (req.Body.Type)
                 {
                     case BodyType.RawJson:
-                    case BodyType.RawXml:
-                    case BodyType.RawText:
-                        body = req.Body.RawContent;
+                        body = EnvironmentVariableResolver.Resolve(req.Body.RawContent, vars);
+                        EnsureContentType(headers, "application/json");
                         break;
-                    case BodyType.FormData:
+                    case BodyType.RawXml:
+                        body = EnvironmentVariableResolver.Resolve(req.Body.RawContent, vars);
+                        EnsureContentType(headers, "application/xml");
+                        break;
+                    case BodyType.RawText:
+                        body = EnvironmentVariableResolver.Resolve(req.Body.RawContent, vars);
+                        EnsureContentType(headers, "text/plain");
+                        break;
+                    case BodyType.FormUrlEncoded:
                         body = string.Join("&", req.Body.FormData
-                            .Where(f => f.Enabled && !string.IsNullOrEmpty(f.Key))
-                            .Select(f => $"{Uri.EscapeDataString(f.Key)}={Uri.EscapeDataString(f.Value)}"));
-                        if (!headers.ContainsKey("Content-Type"))
-                            headers["Content-Type"] = "application/x-www-form-urlencoded";
+                            .Where(field => field.Enabled && !string.IsNullOrEmpty(field.Key))
+                            .Select(field =>
+                            {
+                                var fieldKey = EnvironmentVariableResolver.Resolve(field.Key, vars);
+                                var fieldValue = EnvironmentVariableResolver.Resolve(field.Value, vars);
+                                return $"{Uri.EscapeDataString(fieldKey)}={Uri.EscapeDataString(fieldValue)}";
+                            }));
+                        EnsureContentType(headers, "application/x-www-form-urlencoded");
                         break;
                 }
             }
 
-            // CORS proxy
+            var timeoutMs = Math.Max(1, ApiState.Settings.TimeoutSeconds) * 1000;
             if (ApiState.CorsProxy.Enabled
                 && (ApiState.CorsProxy.ProxyUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                     || ApiState.CorsProxy.ProxyUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase)))
+            {
                 url = ApiState.CorsProxy.ProxyUrl + Uri.EscapeDataString(url);
+            }
 
-            var result = await Fetch.SendAsync(req.Method.ToString(), url, headers, body);
+            var result = await Fetch.SendAsync(
+                requestId,
+                req.Method.ToString(),
+                url,
+                headers,
+                body,
+                timeoutMs,
+                ApiState.Settings.FollowRedirects);
 
-            var contentTypeHeader = result.Headers.FirstOrDefault(h =>
-                h.Key.Equals("content-type", StringComparison.OrdinalIgnoreCase))?.Value;
+            if (_activeRequestId != requestId)
+            {
+                return;
+            }
+
+            if (result.WasCancelled)
+            {
+                shouldRecordHistory = false;
+                response = new ResponseData
+                {
+                    StatusCode = 0,
+                    StatusText = "Cancelled",
+                    ResponseTimeMs = result.ResponseTimeMs,
+                    ResponseSizeBytes = 0,
+                    Headers = [],
+                    Body = "Request cancelled.",
+                    DetectedContentType = ContentType.PlainText
+                };
+
+                ApiState.SetResponse(response);
+                App.SetLastResponse(response.Body, response.DetectedContentType);
+                return;
+            }
+
+            var contentTypeHeader = result.Headers.FirstOrDefault(header =>
+                header.Key.Equals("content-type", StringComparison.OrdinalIgnoreCase))?.Value;
             var detectedType = ContentTypeDetector.Detect(result.Body, contentTypeHeader);
 
-            var response = new ResponseData
+            response = new ResponseData
             {
                 StatusCode = result.StatusCode,
                 StatusText = result.Success ? result.StatusText : (result.ErrorMessage ?? "Error"),
@@ -204,30 +494,150 @@
 
             ApiState.SetResponse(response);
             App.SetLastResponse(response.Body, detectedType);
-
-            // Add to history
-            ApiState.AddHistoryEntry(new HistoryEntry
-            {
-                RequestName = req.Name,
-                Method = req.Method,
-                Url = req.Url,
-                StatusCode = result.StatusCode,
-                ResponseTimeMs = result.ResponseTimeMs
-            });
         }
         catch (Exception ex)
         {
-            ApiState.SetResponse(new ResponseData
+            shouldRecordHistory = false;
+            response = new ResponseData
             {
                 StatusCode = 0,
                 StatusText = ex.Message,
                 Body = ex.Message,
                 DetectedContentType = ContentType.PlainText
-            });
+            };
+            ApiState.SetResponse(response);
+            App.SetLastResponse(response.Body, response.DetectedContentType);
         }
         finally
         {
+            if (_activeRequestId == requestId)
+            {
+                _activeRequestId = null;
+            }
+
             ApiState.SetLoading(false);
+            if (shouldRecordHistory && response is not null)
+            {
+                ApiState.AddHistoryEntry(RequestSnapshotSerializer.CreateHistoryEntry(req, response));
+            }
         }
+    }
+
+    private async Task CancelRequest()
+    {
+        if (string.IsNullOrWhiteSpace(_activeRequestId))
+        {
+            return;
+        }
+
+        await Fetch.CancelRequestAsync(_activeRequestId);
+    }
+
+    private Collection EnsureCollection()
+    {
+        var existing = ApiState.Collections.FirstOrDefault();
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        var collection = new Collection
+        {
+            Name = "Getting Started"
+        };
+
+        ApiState.AddCollection(collection);
+        return collection;
+    }
+
+    private (string CollectionId, string? FolderId) GetPreferredTarget()
+    {
+        if (!string.IsNullOrWhiteSpace(ApiState.SelectedRequestId))
+        {
+            var location = ApiState.GetRequestLocation(ApiState.SelectedRequestId);
+            if (location is not null)
+            {
+                return location.Value;
+            }
+        }
+
+        var collection = EnsureCollection();
+        return (collection.Id, null);
+    }
+
+    private bool HasMeaningfulDraft()
+    {
+        var request = ApiState.ActiveRequest;
+        return !string.IsNullOrWhiteSpace(request.Url)
+            || request.QueryParams.Any(entry => !string.IsNullOrWhiteSpace(entry.Key) || !string.IsNullOrWhiteSpace(entry.Value))
+            || request.Headers.Any(entry => !string.IsNullOrWhiteSpace(entry.Key) || !string.IsNullOrWhiteSpace(entry.Value))
+            || request.Body.Type != BodyType.None
+            || !string.IsNullOrWhiteSpace(request.Body.RawContent)
+            || request.Body.FormData.Any(entry => !string.IsNullOrWhiteSpace(entry.Key) || !string.IsNullOrWhiteSpace(entry.Value))
+            || request.Auth.Type != AuthType.None;
+    }
+
+    private void TrySelectFirstRequest()
+    {
+        if (ApiState.SelectedRequestId is not null)
+        {
+            return;
+        }
+
+        var requestId = ApiState.Collections
+            .SelectMany(EnumerateRequestIds)
+            .FirstOrDefault()
+            ?? ApiState.Requests.Keys.FirstOrDefault();
+
+        if (requestId is not null && ApiState.Requests.TryGetValue(requestId, out var request))
+        {
+            ApiState.SetActiveRequest(RequestUrlSynchronizer.SyncParamsFromUrl(request));
+        }
+        else
+        {
+            StateHasChanged();
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRequestIds(Collection collection)
+    {
+        foreach (var requestId in collection.RootRequestIds)
+        {
+            yield return requestId;
+        }
+
+        foreach (var requestId in collection.Folders.SelectMany(EnumerateRequestIds))
+        {
+            yield return requestId;
+        }
+    }
+
+    private static IEnumerable<string> EnumerateRequestIds(RequestFolder folder)
+    {
+        foreach (var requestId in folder.RequestIds)
+        {
+            yield return requestId;
+        }
+
+        foreach (var requestId in folder.SubFolders.SelectMany(EnumerateRequestIds))
+        {
+            yield return requestId;
+        }
+    }
+
+    private static void EnsureContentType(Dictionary<string, string> headers, string contentType)
+    {
+        if (!headers.ContainsKey("Content-Type"))
+        {
+            headers["Content-Type"] = contentType;
+        }
+    }
+
+    private static string BuildFileName(string name, string fallback)
+    {
+        var source = string.IsNullOrWhiteSpace(name) ? fallback : name.Trim();
+        var invalid = System.IO.Path.GetInvalidFileNameChars();
+        var sanitized = new string(source.Select(character => invalid.Contains(character) ? '-' : character).ToArray());
+        return string.IsNullOrWhiteSpace(sanitized) ? fallback : sanitized;
     }
 }

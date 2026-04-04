@@ -87,16 +87,23 @@
 
     protected override void OnInitialized()
     {
-        Diff.OnChange += StateHasChanged;
+        Diff.OnChange += HandleStateChanged;
         _leftText = Diff.LeftText;
         _rightText = Diff.RightText;
     }
 
     public void Dispose()
     {
-        Diff.OnChange -= StateHasChanged;
+        Diff.OnChange -= HandleStateChanged;
         _debounceCts?.Cancel();
         _debounceCts?.Dispose();
+    }
+
+    private void HandleStateChanged()
+    {
+        _leftText = Diff.LeftText;
+        _rightText = Diff.RightText;
+        StateHasChanged();
     }
 
     private async void OnTextChanged()

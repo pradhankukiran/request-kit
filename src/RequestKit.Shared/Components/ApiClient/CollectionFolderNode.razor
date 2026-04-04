@@ -1,0 +1,124 @@
+@inject ApiClientState ApiState
+
+<div class="rk-tree-group" @key="Folder.Id">
+    <div class="rk-tree-row">
+        <button type="button"
+                class="rk-tree-item rk-tree-folder"
+                style="@FolderPadding"
+                @onclick="ToggleFolder">
+            <span class="rk-tree-chevron @(Folder.IsExpanded ? "expanded" : "")">&#9656;</span>
+            <span class="rk-tree-folder-icon">&#128193;</span>
+            <span class="rk-tree-name">@Folder.Name</span>
+            <span class="rk-tree-count">@CountDescendantRequests(Folder)</span>
+        </button>
+        <div class="rk-tree-actions">
+            <button type="button" class="rk-tree-action" title="Add request" @onclick="AddRequest">+R</button>
+            <button type="button" class="rk-tree-action" title="Add subfolder" @onclick="AddFolder">+F</button>
+        </div>
+    </div>
+
+    @if (Folder.IsExpanded)
+    {
+        @foreach (var requestId in Folder.RequestIds)
+        {
+            if (ApiState.Requests.TryGetValue(requestId, out var request))
+            {
+                <button type="button"
+                        class="rk-tree-item rk-tree-request @(ApiState.SelectedRequestId == requestId ? "active" : "")"
+                        style="@RequestPadding"
+                        @key="requestId"
+                        @onclick="() => ApiState.SetActiveRequest(RequestUrlSynchronizer.SyncParamsFromUrl(request))">
+                    <span class="rk-method rk-method-@request.Method.ToString().ToLowerInvariant()">@request.Method</span>
+                    <span class="rk-tree-name">@request.Name</span>
+                </button>
+            }
+        }
+
+        @foreach (var subFolder in Folder.SubFolders)
+        {
+            <CollectionFolderNode CollectionId="@CollectionId" Folder="@subFolder" Depth="@(Depth + 1)" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string CollectionId { get; set; } = string.Empty;
+    [Parameter] public RequestFolder Folder { get; set; } = new();
+    [Parameter] public int Depth { get; set; }
+
+    private string FolderPadding => $"padding-left:{20 + (Depth * 16)}px;";
+    private string RequestPadding => $"padding-left:{40 + (Depth * 16)}px;";
+
+    private void ToggleFolder()
+    {
+        var collection = ApiState.GetCollection(CollectionId);
+        if (collection is null)
+        {
+            return;
+        }
+
+        ApiState.SetCollectionFolders(
+            CollectionId,
+            UpdateFolder(collection.Folders, Folder.Id, existing => existing with { IsExpanded = !existing.IsExpanded }));
+    }
+
+    private void AddRequest()
+    {
+        var collection = ApiState.GetCollection(CollectionId);
+        if (collection is null)
+        {
+            return;
+        }
+
+        var request = new RequestDefinition { Name = "New Request" };
+        ApiState.AddRequest(request, CollectionId, Folder.Id);
+        ApiState.SetActiveRequest(request);
+    }
+
+    private void AddFolder()
+    {
+        var collection = ApiState.GetCollection(CollectionId);
+        if (collection is null)
+        {
+            return;
+        }
+
+        var folder = new RequestFolder
+        {
+            Name = $"Folder {CountFolders(collection.Folders) + 1}"
+        };
+
+        ApiState.SetCollectionFolders(
+            CollectionId,
+            UpdateFolder(collection.Folders, Folder.Id, existing => existing with { SubFolders = [.. existing.SubFolders, folder] }));
+    }
+
+    private static int CountFolders(IEnumerable<RequestFolder> folders) =>
+        folders.Sum(folder => 1 + CountFolders(folder.SubFolders));
+
+    private static int CountDescendantRequests(RequestFolder folder) =>
+        folder.RequestIds.Count + folder.SubFolders.Sum(CountDescendantRequests);
+
+    private static List<RequestFolder> UpdateFolder(
+        IEnumerable<RequestFolder> folders,
+        string folderId,
+        Func<RequestFolder, RequestFolder> update)
+    {
+        return folders
+            .Select(folder =>
+            {
+                if (folder.Id == folderId)
+                {
+                    return update(folder);
+                }
+
+                if (folder.SubFolders.Count == 0)
+                {
+                    return folder;
+                }
+
+                return folder with { SubFolders = UpdateFolder(folder.SubFolders, folderId, update) };
+            })
+            .ToList();
+    }
+}

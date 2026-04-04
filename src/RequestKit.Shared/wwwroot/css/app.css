@@ -237,9 +237,9 @@ body {
 /* --- History Panel --- */
 .rk-history-item {
     display: flex; align-items: center; gap: 8px; padding: 10px 14px;
-    border: none; border-bottom: 1px solid var(--rk-surface); cursor: pointer;
+    border: none; cursor: pointer;
     font-size: 13px; transition: background 0.1s;
-    background: transparent; text-align: left; width: 100%;
+    background: transparent; text-align: left; width: 100%; flex: 1;
     font-family: inherit; color: inherit;
 }
 .rk-history-item:hover { background: var(--rk-surface); }
@@ -370,7 +370,15 @@ body {
 .rk-dropdown-item:hover { background: var(--rk-surface); }
 
 /* --- Loading Spinner --- */
-.rk-loading { display: flex; align-items: center; justify-content: center; padding: 24px; }
+.rk-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px;
+    flex: 1;
+    min-height: 0;
+}
 .rk-loading-spinner {
     width: 28px; height: 28px; border: 3px solid var(--rk-border);
     border-top-color: var(--rk-primary); border-radius: 50%;
@@ -429,6 +437,28 @@ body {
     display: flex;
     flex-direction: column;
     height: 100%;
+    position: relative;
+    min-height: 0;
+}
+.rk-response-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+.rk-response-content.is-loading {
+    overflow: hidden;
+}
+.rk-response-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    background: rgba(248, 250, 252, 0.78);
+    backdrop-filter: blur(1.5px);
+    z-index: 2;
+    pointer-events: all;
 }
 .rk-response-header {
     display: flex;
@@ -458,6 +488,20 @@ body {
     background: var(--rk-surface);
 }
 .rk-response-body { flex: 1; overflow: hidden; min-height: 200px; }
+.rk-response-body-fallback {
+    overflow: auto;
+    padding: 16px;
+    background: var(--rk-white);
+}
+.rk-response-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--rk-text);
+}
 .rk-response-headers-list { flex: 1; overflow: auto; }
 .rk-header-row {
     display: flex;
@@ -485,6 +529,84 @@ body {
 .rk-body-textarea { flex: 1; min-height: 160px; resize: none; }
 .rk-auth-panel { padding: 4px 0; }
 .rk-kv-editor { padding: 4px 0; }
+.rk-settings-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.rk-settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border: 1px solid var(--rk-border);
+    padding: 16px;
+    background: var(--rk-surface);
+}
+.rk-settings-section-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.rk-settings-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.rk-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+.rk-settings-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--rk-text);
+}
+.rk-settings-subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--rk-text-secondary);
+    line-height: 1.5;
+}
+.rk-settings-subtitle code {
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+}
+.rk-settings-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--rk-text);
+}
+.rk-settings-note {
+    font-size: 12px;
+    color: var(--rk-text-secondary);
+    line-height: 1.5;
+}
+.rk-env-variable-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.rk-env-variable-row {
+    display: grid;
+    grid-template-columns: auto minmax(120px, 1fr) minmax(160px, 1.2fr) auto auto;
+    gap: 6px;
+    align-items: center;
+}
+.rk-env-toggle {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--rk-primary);
+}
+.rk-env-key,
+.rk-env-value {
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+}
 .rk-method-select {
     width: auto;
     min-width: 100px;
@@ -509,11 +631,37 @@ body {
     color: var(--rk-text);
 }
 .rk-url-input:focus { outline: 2px solid var(--rk-primary); outline-offset: -2px; }
-.rk-send-btn {
+.rk-url-bar .rk-send-btn {
     border: none;
     border-left: 1px solid var(--rk-border);
     border-radius: 0;
-    min-width: 84px;
+    width: 120px;
+    min-width: 120px;
+    flex-basis: 120px;
+    justify-content: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-left: 14px;
+    padding-right: 14px;
+}
+.rk-send-btn.is-loading {
+    background: var(--rk-primary);
+    border-color: var(--rk-border);
+    color: var(--rk-white);
+}
+.rk-send-btn.is-loading:hover {
+    background: var(--rk-primary-hover);
+    border-color: var(--rk-border);
+}
+.rk-send-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: var(--rk-white);
+    border-radius: 50%;
+    animation: rk-spin 0.6s linear infinite;
+    flex-shrink: 0;
+    margin-left: 2px;
 }
 
 /* --- API Client Layout with Sidebar --- */
@@ -572,6 +720,118 @@ body {
     border-bottom: 1px solid var(--rk-surface);
     gap: 4px;
 }
+.rk-request-toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+.rk-request-name-input {
+    min-width: 0;
+    max-width: 280px;
+    font-size: 13px;
+    font-weight: 600;
+}
+.rk-request-drawer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--rk-border);
+    background: linear-gradient(180deg, #fbfdff 0%, #f5f9ff 100%);
+}
+.rk-request-drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+.rk-request-drawer-actions {
+    display: flex;
+    gap: 8px;
+}
+.rk-curl-textarea {
+    min-height: 172px;
+    font-family: var(--rk-font-mono);
+    line-height: 1.6;
+}
+.rk-inline-banner {
+    margin: 0;
+}
+.rk-api-onboarding {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.08), transparent 34%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.rk-api-onboarding-hero {
+    padding: 28px;
+    border: 1px solid var(--rk-border);
+    background:
+        linear-gradient(135deg, rgba(37, 99, 235, 0.06), rgba(14, 165, 233, 0.02)),
+        var(--rk-white);
+    box-shadow: var(--rk-shadow-sm);
+}
+.rk-api-onboarding-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--rk-primary);
+}
+.rk-api-onboarding-title {
+    margin-top: 12px;
+    font-size: 28px;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    color: var(--rk-text);
+}
+.rk-api-onboarding-copy {
+    max-width: 58ch;
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--rk-text-secondary);
+}
+.rk-api-onboarding-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+.rk-api-onboarding-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.rk-api-onboarding-card {
+    min-height: 132px;
+    padding: 18px;
+    border: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    box-shadow: var(--rk-shadow-sm);
+}
+.rk-api-onboarding-card-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--rk-text);
+}
+.rk-api-onboarding-card-copy {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--rk-text-secondary);
+}
+.rk-api-onboarding-card code {
+    font-family: var(--rk-font-mono);
+    font-size: 12px;
+}
 
 /* --- Collections Sidebar --- */
 .rk-collections-sidebar {
@@ -591,6 +851,34 @@ body {
     text-align: center;
     font-size: 12px;
 }
+.rk-sidebar-selection-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 8px;
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-white);
+}
+.rk-sidebar-selection-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rk-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.rk-sidebar-selection-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    align-items: center;
+}
+.rk-select-sm {
+    min-width: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 12px;
+}
 .rk-sidebar-empty {
     display: flex;
     flex-direction: column;
@@ -604,6 +892,14 @@ body {
 }
 .rk-tree-collection {
     margin-bottom: 2px;
+}
+.rk-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.rk-tree-row .rk-tree-item {
+    flex: 1;
 }
 .rk-tree-chevron {
     display: inline-block;
@@ -638,6 +934,28 @@ body {
 .rk-tree-request .rk-method {
     flex-shrink: 0;
 }
+.rk-tree-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 4px;
+    flex-shrink: 0;
+}
+.rk-tree-action {
+    min-width: 28px;
+    height: 28px;
+    border: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    color: var(--rk-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--rk-font-mono);
+    cursor: pointer;
+}
+.rk-tree-action:hover {
+    color: var(--rk-primary);
+    border-color: var(--rk-primary);
+}
 
 /* --- History Panel --- */
 .rk-history-panel {
@@ -649,12 +967,22 @@ body {
     flex: 1;
     overflow-y: auto;
 }
+.rk-history-row {
+    display: flex;
+    align-items: stretch;
+    border-bottom: 1px solid var(--rk-surface);
+}
 .rk-history-details {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 3px;
+}
+.rk-history-actions {
+    display: flex;
+    align-items: center;
+    padding: 8px 8px 8px 0;
 }
 .rk-history-meta {
     display: flex;
@@ -677,6 +1005,98 @@ body {
 }
 .rk-history-timestamp {
     margin-left: auto;
+}
+
+/* --- Response Viewer Extended --- */
+.rk-response-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--rk-border);
+    background: var(--rk-white);
+}
+.rk-response-view-tabs {
+    display: flex;
+    align-items: center;
+}
+.rk-response-view-tabs .rk-tab {
+    padding: 8px 12px;
+}
+.rk-response-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+}
+.rk-response-search-input {
+    max-width: 280px;
+}
+.rk-response-search-meta {
+    font-size: 12px;
+    color: var(--rk-text-muted);
+    white-space: nowrap;
+}
+.rk-response-pre mark,
+.rk-json-tree mark {
+    background: #fef08a;
+    color: inherit;
+}
+.rk-response-preview {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--rk-white);
+}
+.rk-response-preview-frame {
+    width: 100%;
+    flex: 1;
+    min-height: 260px;
+    border: none;
+    background: var(--rk-white);
+}
+.rk-response-preview-note {
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--rk-border);
+    font-size: 12px;
+    color: var(--rk-text-secondary);
+    background: var(--rk-warning-light);
+}
+.rk-preview-empty {
+    background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+}
+.rk-json-tree {
+    overflow: auto;
+    padding: 16px;
+    font-family: var(--rk-font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+}
+.rk-json-line {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.rk-json-key {
+    color: #1d4ed8;
+}
+.rk-json-string {
+    color: #047857;
+}
+.rk-json-number {
+    color: #b45309;
+}
+.rk-json-boolean {
+    color: #7c3aed;
+}
+.rk-json-null {
+    color: var(--rk-text-muted);
+}
+.rk-json-brace,
+.rk-json-punctuation {
+    color: var(--rk-text-secondary);
 }
 
 /* --- Diff Viewer --- */
@@ -1312,6 +1732,18 @@ mark.rk-regex-hl {
     }
     .rk-url-bar {
         flex-wrap: wrap;
+    }
+    .rk-settings-section-header {
+        flex-direction: column;
+    }
+    .rk-env-variable-row {
+        grid-template-columns: auto 1fr;
+    }
+    .rk-env-variable-row .rk-env-value {
+        grid-column: 1 / -1;
+    }
+    .rk-api-onboarding-grid {
+        grid-template-columns: 1fr;
     }
     .rk-home-features {
         grid-template-columns: 1fr;

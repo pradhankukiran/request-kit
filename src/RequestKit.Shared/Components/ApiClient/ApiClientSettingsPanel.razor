@@ -1,0 +1,320 @@
+@inject ApiClientState ApiState
+
+<div class="rk-settings-panel">
+    <section class="rk-settings-section">
+        <div class="rk-settings-section-header">
+            <div>
+                <div class="rk-settings-title">Workspace Settings</div>
+                <div class="rk-settings-subtitle">Control autosave cadence, request timeout, redirect behavior, and history retention.</div>
+            </div>
+        </div>
+
+        <label class="rk-settings-checkbox">
+            <input type="checkbox"
+                   checked="@ApiState.Settings.AutoSaveEnabled"
+                   @onchange="e => UpdateAutoSaveEnabled((bool)(e.Value ?? false))" />
+            <span>Enable autosave</span>
+        </label>
+
+        <div class="rk-settings-grid">
+            <div class="rk-field">
+                <label class="rk-label">Autosave Delay (seconds)</label>
+                <input type="number"
+                       min="1"
+                       max="300"
+                       class="rk-input"
+                       value="@ApiState.Settings.AutoSaveIntervalSeconds"
+                       @oninput="e => UpdateAutoSaveInterval(ParsePositiveInt(e.Value?.ToString(), ApiState.Settings.AutoSaveIntervalSeconds))" />
+            </div>
+            <div class="rk-field">
+                <label class="rk-label">Request Timeout (seconds)</label>
+                <input type="number"
+                       min="1"
+                       max="300"
+                       class="rk-input"
+                       value="@ApiState.Settings.TimeoutSeconds"
+                       @oninput="e => UpdateTimeout(ParsePositiveInt(e.Value?.ToString(), ApiState.Settings.TimeoutSeconds))" />
+            </div>
+            <div class="rk-field">
+                <label class="rk-label">Max History Entries</label>
+                <input type="number"
+                       min="1"
+                       max="5000"
+                       class="rk-input"
+                       value="@ApiState.Settings.MaxHistoryEntries"
+                       @oninput="e => UpdateMaxHistoryEntries(ParsePositiveInt(e.Value?.ToString(), ApiState.Settings.MaxHistoryEntries))" />
+            </div>
+        </div>
+
+        <label class="rk-settings-checkbox">
+            <input type="checkbox"
+                   checked="@ApiState.Settings.FollowRedirects"
+                   @onchange="e => UpdateFollowRedirects((bool)(e.Value ?? false))" />
+            <span>Follow redirects</span>
+        </label>
+    </section>
+
+    <section class="rk-settings-section">
+        <div class="rk-settings-section-header">
+            <div>
+                <div class="rk-settings-title">Environments</div>
+                <div class="rk-settings-subtitle">Define variables and resolve them with <code>{{name}}</code> in request URLs.</div>
+            </div>
+            <div class="rk-settings-actions">
+                <button class="rk-btn rk-btn-sm" @onclick="AddEnvironment">+ Environment</button>
+                <button class="rk-btn rk-btn-sm" @onclick="DeleteActiveEnvironment" disabled="@(ApiState.ActiveEnvironment is null)">Delete</button>
+            </div>
+        </div>
+
+        <div class="rk-field">
+            <label class="rk-label">Active Environment</label>
+            <select class="rk-select" value="@SelectedEnvironmentValue" @onchange="OnActiveEnvironmentChanged">
+                <option value="">No Environment</option>
+                @foreach (var environment in ApiState.Environments.OrderBy(e => e.SortOrder).ThenBy(e => e.Name))
+                {
+                    <option value="@environment.Id">@environment.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (ApiState.ActiveEnvironment is null)
+        {
+            <div class="rk-sidebar-empty">
+                <span style="font-weight:600;font-size:14px;color:var(--rk-text);">No active environment</span>
+                <span>Create one to parameterize request URLs with reusable values.</span>
+            </div>
+        }
+        else
+        {
+            <div class="rk-field">
+                <label class="rk-label">Environment Name</label>
+                <input type="text"
+                       class="rk-input"
+                       value="@ApiState.ActiveEnvironment.Name"
+                       @oninput="OnEnvironmentNameChanged"
+                       placeholder="Development" />
+            </div>
+
+            <div class="rk-field">
+                <label class="rk-label">Variables</label>
+                <div class="rk-env-variable-list">
+                    @foreach (var variable in ApiState.ActiveEnvironment.Variables)
+                    {
+                        var isRevealed = _revealedSecrets.Contains(variable.Id);
+
+                        <div class="rk-env-variable-row" @key="variable.Id">
+                            <input class="rk-env-toggle"
+                                   type="checkbox"
+                                   checked="@variable.Enabled"
+                                   @onchange="e => ToggleVariableEnabled(variable.Id, (bool)(e.Value ?? false))" />
+                            <input class="rk-input rk-env-key"
+                                   type="text"
+                                   placeholder="variable"
+                                   value="@variable.Key"
+                                   @oninput="e => UpdateVariableKey(variable.Id, e.Value?.ToString() ?? string.Empty)" />
+                            <input class="rk-input rk-env-value"
+                                   type="@(variable.IsSecret && !isRevealed ? "password" : "text")"
+                                   placeholder="value"
+                                   value="@variable.Value"
+                                   @oninput="e => UpdateVariableValue(variable.Id, e.Value?.ToString() ?? string.Empty)" />
+                            <button class="rk-btn rk-btn-sm"
+                                    @onclick="() => ToggleVariableSecret(variable.Id)"
+                                    title="Toggle secret visibility">
+                                @(variable.IsSecret ? (isRevealed ? "Hide" : "Show") : "Secret")
+                            </button>
+                            <button class="rk-btn rk-btn-icon"
+                                    @onclick="() => RemoveVariable(variable.Id)"
+                                    title="Remove variable">
+                                x
+                            </button>
+                        </div>
+                    }
+                </div>
+                <button class="rk-btn rk-btn-sm" @onclick="AddVariable">+ Variable</button>
+            </div>
+        }
+    </section>
+
+    <section class="rk-settings-section">
+        <div class="rk-settings-section-header">
+            <div>
+                <div class="rk-settings-title">Request Routing</div>
+                <div class="rk-settings-subtitle">Use an external proxy when browser CORS restrictions block direct requests.</div>
+            </div>
+        </div>
+
+        <label class="rk-settings-checkbox">
+            <input type="checkbox"
+                   checked="@ApiState.CorsProxy.Enabled"
+                   @onchange="e => ToggleCorsProxy((bool)(e.Value ?? false))" />
+            <span>Route requests through proxy</span>
+        </label>
+
+        @if (ApiState.CorsProxy.Enabled)
+        {
+            <div class="rk-field">
+                <label class="rk-label">Proxy URL</label>
+                <input type="text"
+                       class="rk-input"
+                       value="@ApiState.CorsProxy.ProxyUrl"
+                       @oninput="e => UpdateCorsProxyUrl(e.Value?.ToString() ?? string.Empty)"
+                       placeholder="https://corsproxy.io/?" />
+            </div>
+
+            <div class="rk-settings-note">
+                The request URL is appended to the proxy URL when proxying is enabled.
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private readonly HashSet<string> _revealedSecrets = [];
+
+    private string SelectedEnvironmentValue => ApiState.ActiveEnvironmentId ?? string.Empty;
+
+    private void UpdateAutoSaveEnabled(bool enabled) =>
+        ApiState.UpdateWorkspaceSettings(settings => settings with { AutoSaveEnabled = enabled });
+
+    private void UpdateAutoSaveInterval(int seconds) =>
+        ApiState.UpdateWorkspaceSettings(settings => settings with { AutoSaveIntervalSeconds = seconds });
+
+    private void UpdateTimeout(int seconds) =>
+        ApiState.UpdateWorkspaceSettings(settings => settings with { TimeoutSeconds = seconds });
+
+    private void UpdateMaxHistoryEntries(int maxEntries) =>
+        ApiState.UpdateWorkspaceSettings(settings => settings with { MaxHistoryEntries = maxEntries });
+
+    private void UpdateFollowRedirects(bool followRedirects) =>
+        ApiState.UpdateWorkspaceSettings(settings => settings with { FollowRedirects = followRedirects });
+
+    private void AddEnvironment()
+    {
+        var nextSort = ApiState.Environments.Count == 0 ? 0 : ApiState.Environments.Max(e => e.SortOrder) + 1;
+        var environment = new RequestKit.Core.Models.Environment
+        {
+            Name = $"Environment {ApiState.Environments.Count + 1}",
+            SortOrder = nextSort
+        };
+
+        ApiState.AddEnvironment(environment);
+        ApiState.SetActiveEnvironment(environment.Id);
+    }
+
+    private void DeleteActiveEnvironment()
+    {
+        var active = ApiState.ActiveEnvironment;
+        if (active is null)
+        {
+            return;
+        }
+
+        ApiState.DeleteEnvironment(active.Id);
+        _revealedSecrets.Clear();
+    }
+
+    private void OnActiveEnvironmentChanged(ChangeEventArgs args)
+    {
+        var environmentId = args.Value?.ToString();
+        ApiState.SetActiveEnvironment(string.IsNullOrWhiteSpace(environmentId) ? null : environmentId);
+        _revealedSecrets.Clear();
+    }
+
+    private void OnEnvironmentNameChanged(ChangeEventArgs args)
+    {
+        var active = ApiState.ActiveEnvironment;
+        if (active is null)
+        {
+            return;
+        }
+
+        ApiState.SetEnvironmentName(active.Id, args.Value?.ToString() ?? string.Empty);
+    }
+
+    private void AddVariable()
+    {
+        var active = ApiState.ActiveEnvironment;
+        if (active is null)
+        {
+            return;
+        }
+
+        ApiState.AddEnvironmentVariable(active.Id, new EnvironmentVariable());
+    }
+
+    private void RemoveVariable(string variableId)
+    {
+        var active = ApiState.ActiveEnvironment;
+        if (active is null)
+        {
+            return;
+        }
+
+        ApiState.DeleteEnvironmentVariable(active.Id, variableId);
+        _revealedSecrets.Remove(variableId);
+    }
+
+    private void ToggleVariableEnabled(string variableId, bool enabled)
+    {
+        UpdateVariable(variableId, variable => variable with { Enabled = enabled });
+    }
+
+    private void UpdateVariableKey(string variableId, string key)
+    {
+        UpdateVariable(variableId, variable => variable with { Key = key });
+    }
+
+    private void UpdateVariableValue(string variableId, string value)
+    {
+        UpdateVariable(variableId, variable => variable with { Value = value });
+    }
+
+    private void ToggleVariableSecret(string variableId)
+    {
+        var active = ApiState.ActiveEnvironment;
+        var variable = active?.Variables.FirstOrDefault(entry => entry.Id == variableId);
+        if (variable is null)
+        {
+            return;
+        }
+
+        if (variable.IsSecret)
+        {
+            if (!_revealedSecrets.Remove(variableId))
+            {
+                _revealedSecrets.Add(variableId);
+            }
+
+            return;
+        }
+
+        UpdateVariable(variableId, existing => existing with { IsSecret = true });
+        _revealedSecrets.Remove(variableId);
+    }
+
+    private void ToggleCorsProxy(bool enabled)
+    {
+        ApiState.UpdateCorsProxy(proxy => proxy with { Enabled = enabled });
+    }
+
+    private void UpdateCorsProxyUrl(string proxyUrl)
+    {
+        ApiState.UpdateCorsProxy(proxy => proxy with { ProxyUrl = proxyUrl });
+    }
+
+    private void UpdateVariable(string variableId, Func<EnvironmentVariable, EnvironmentVariable> update)
+    {
+        var active = ApiState.ActiveEnvironment;
+        if (active is null)
+        {
+            return;
+        }
+
+        ApiState.UpdateEnvironmentVariable(active.Id, variableId, update);
+    }
+
+    private static int ParsePositiveInt(string? rawValue, int fallback)
+    {
+        return int.TryParse(rawValue, out var parsed) && parsed > 0 ? parsed : fallback;
+    }
+}

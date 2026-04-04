@@ -33,7 +33,7 @@
     </div>
 
     <div class="rk-home-content">
-        <button class="rk-btn rk-btn-primary rk-btn-lg rk-home-cta" @onclick="CreateWorkspace">+ New Workspace</button>
+        <button class="rk-btn rk-btn-primary rk-btn-lg rk-home-cta" @onclick="CreateWorkspaceAsync">+ New Workspace</button>
 
         @if (!string.IsNullOrEmpty(_loadError))
         {
@@ -47,7 +47,7 @@
             {
                 <div class="rk-workspace-card" @key="ws.Id" @onclick="() => OpenWorkspace(ws.Id)">
                     <div class="rk-workspace-name">@ws.Name</div>
-                    <div class="rk-workspace-meta">@ws.RequestCount requests &middot; @ws.ModifiedAt.ToString("MMM d, yyyy")</div>
+                    <div class="rk-workspace-meta">@ws.RequestCount requests &middot; @ws.CollectionCount collections &middot; @ws.ModifiedAt.ToString("MMM d, yyyy")</div>
                 </div>
             }
         }
@@ -72,18 +72,48 @@
         }
     }
 
-    private void CreateWorkspace()
+    private async Task CreateWorkspaceAsync()
     {
-        ApiState.LoadWorkspace(new Workspace());
+        var workspace = new Workspace();
+
+        await ApiState.WorkspacePersistenceLock.WaitAsync();
+        try
+        {
+            ApiState.SetWorkspaceSaving(true);
+            await Storage.SaveWorkspaceAsync(workspace);
+            ApiState.LoadWorkspace(workspace);
+            ApiState.MarkWorkspaceSaved(workspace.ModifiedAt);
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to create workspace: {ex.Message}");
+            _loadError = "Failed to create workspace. Storage may be unavailable.";
+            ApiState.LoadWorkspace(workspace);
+            ApiState.SetWorkspaceSaving(false);
+        }
+        finally
+        {
+            ApiState.WorkspacePersistenceLock.Release();
+        }
+
         App.SetMode(ToolMode.ApiClient);
         Nav.NavigateTo("/workbench");
     }
 
     private async Task OpenWorkspace(string id)
     {
-        var ws = await Storage.LoadWorkspaceAsync(id);
-        ApiState.LoadWorkspace(ws);
-        App.SetMode(ToolMode.ApiClient);
-        Nav.NavigateTo("/workbench");
+        try
+        {
+            var ws = await Storage.LoadWorkspaceAsync(id);
+            ApiState.LoadWorkspace(ws);
+            App.SetMode(ToolMode.ApiClient);
+            Nav.NavigateTo("/workbench");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Failed to open workspace {id}: {ex.Message}");
+            _loadError = "Failed to open workspace. It may have been deleted or storage is unavailable.";
+        }
     }
 }

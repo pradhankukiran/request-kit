@@ -12,7 +12,7 @@ public enum AuthType
 
 public enum BodyType
 {
-    None, RawJson, RawXml, RawText, FormData
+    None, RawJson, RawXml, RawText, FormUrlEncoded, FormData = FormUrlEncoded
 }
 
 public enum ContentType

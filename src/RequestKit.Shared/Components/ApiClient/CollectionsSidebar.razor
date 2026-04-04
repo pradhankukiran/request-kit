@@ -4,7 +4,26 @@
     <div class="rk-sidebar-actions">
         <button class="rk-btn rk-btn-sm" @onclick="AddCollection">+ Collection</button>
         <button class="rk-btn rk-btn-sm" @onclick="AddRequest" disabled="@(!ApiState.Collections.Any())">+ Request</button>
+        <button class="rk-btn rk-btn-sm" @onclick="AddFolder" disabled="@(!ApiState.Collections.Any())">+ Folder</button>
     </div>
+
+    @if (SelectedRequest is not null)
+    {
+        <div class="rk-sidebar-selection-bar">
+            <div class="rk-sidebar-selection-title">@SelectedRequest.Name</div>
+            <div class="rk-sidebar-selection-controls">
+                <button class="rk-btn rk-btn-sm" @onclick="DuplicateSelectedRequest">Duplicate</button>
+                <select class="rk-select rk-select-sm" value="@_selectedMoveTarget" @onchange="MoveSelectedRequest">
+                    <option value="">Move to...</option>
+                    @foreach (var target in BuildMoveTargets())
+                    {
+                        <option value="@target.Value">@target.Label</option>
+                    }
+                </select>
+                <button class="rk-btn rk-btn-sm rk-btn-danger" @onclick="DeleteSelectedRequest">Delete</button>
+            </div>
+        </div>
+    }
 
     <div class="rk-collection-tree">
         @if (!ApiState.Collections.Any())
@@ -19,12 +38,18 @@
             @foreach (var collection in ApiState.Collections)
             {
                 <div class="rk-tree-collection" @key="collection.Id">
-                    <button type="button" class="rk-tree-item rk-tree-folder" @onclick="() => ToggleCollection(collection.Id)">
-                        <span class="rk-tree-chevron @(IsExpanded(collection.Id) ? "expanded" : "")">&#9656;</span>
-                        <span class="rk-tree-folder-icon">&#128193;</span>
-                        <span class="rk-tree-name">@collection.Name</span>
-                        <span class="rk-tree-count">@collection.RootRequestIds.Count</span>
-                    </button>
+                    <div class="rk-tree-row">
+                        <button type="button" class="rk-tree-item rk-tree-folder" @onclick="() => ToggleCollection(collection.Id)">
+                            <span class="rk-tree-chevron @(IsExpanded(collection.Id) ? "expanded" : "")">&#9656;</span>
+                            <span class="rk-tree-folder-icon">&#128193;</span>
+                            <span class="rk-tree-name">@collection.Name</span>
+                            <span class="rk-tree-count">@CountRequests(collection)</span>
+                        </button>
+                        <div class="rk-tree-actions">
+                            <button type="button" class="rk-tree-action" title="Add request" @onclick="() => AddRequest(collection.Id)">+R</button>
+                            <button type="button" class="rk-tree-action" title="Add folder" @onclick="() => AddFolder(collection.Id)">+F</button>
+                        </div>
+                    </div>
 
                     @if (IsExpanded(collection.Id))
                     {
@@ -39,6 +64,11 @@
                                 </button>
                             }
                         }
+
+                        @foreach (var folder in collection.Folders)
+                        {
+                            <CollectionFolderNode CollectionId="@collection.Id" Folder="@folder" Depth="0" />
+                        }
                     }
                 </div>
             }
@@ -48,6 +78,12 @@
 
 @code {
     private HashSet<string> _expandedCollections = new();
+    private string _selectedMoveTarget = string.Empty;
+
+    private RequestDefinition? SelectedRequest =>
+        ApiState.SelectedRequestId is not null && ApiState.Requests.TryGetValue(ApiState.SelectedRequestId, out var request)
+            ? request
+            : null;
 
     private bool IsExpanded(string id) => _expandedCollections.Contains(id);
 
@@ -59,7 +95,7 @@
 
     private void SelectRequest(RequestDefinition request)
     {
-        ApiState.SetActiveRequest(request);
+        ApiState.SetActiveRequest(RequestUrlSynchronizer.SyncParamsFromUrl(request));
     }
 
     private void AddCollection()
@@ -74,9 +110,125 @@
         var firstCollection = ApiState.Collections.FirstOrDefault();
         if (firstCollection == null) return;
 
-        var request = new RequestDefinition { Name = "New Request" };
-        ApiState.AddRequest(request, firstCollection.Id);
-        _expandedCollections.Add(firstCollection.Id);
+        AddRequest(firstCollection.Id);
     }
 
+    private void AddRequest(string collectionId)
+    {
+        var request = new RequestDefinition { Name = "New Request" };
+        ApiState.AddRequest(request, collectionId);
+        ApiState.SetActiveRequest(request);
+        _expandedCollections.Add(collectionId);
+    }
+
+    private void AddFolder()
+    {
+        var firstCollection = ApiState.Collections.FirstOrDefault();
+        if (firstCollection == null) return;
+
+        AddFolder(firstCollection.Id);
+    }
+
+    private void AddFolder(string collectionId)
+    {
+        var collection = ApiState.GetCollection(collectionId);
+        if (collection is null)
+        {
+            return;
+        }
+
+        var folder = new RequestFolder
+        {
+            Name = $"Folder {CountFolders(collection.Folders) + 1}"
+        };
+
+        ApiState.SetCollectionFolders(collectionId, [.. collection.Folders, folder]);
+        _expandedCollections.Add(collectionId);
+    }
+
+    private static int CountFolders(IEnumerable<RequestFolder> folders) =>
+        folders.Sum(folder => 1 + CountFolders(folder.SubFolders));
+
+    private static int CountRequests(Collection collection) =>
+        collection.RootRequestIds.Count + collection.Folders.Sum(CountRequests);
+
+    private static int CountRequests(RequestFolder folder) =>
+        folder.RequestIds.Count + folder.SubFolders.Sum(CountRequests);
+
+    private void DuplicateSelectedRequest()
+    {
+        if (ApiState.SelectedRequestId is null)
+        {
+            return;
+        }
+
+        ApiState.DuplicateRequest(ApiState.SelectedRequestId);
+    }
+
+    private void DeleteSelectedRequest()
+    {
+        if (ApiState.SelectedRequestId is null)
+        {
+            return;
+        }
+
+        ApiState.DeleteRequest(ApiState.SelectedRequestId);
+    }
+
+    private void MoveSelectedRequest(ChangeEventArgs args)
+    {
+        if (ApiState.SelectedRequestId is null)
+        {
+            return;
+        }
+
+        var targetValue = args.Value?.ToString() ?? string.Empty;
+        _selectedMoveTarget = targetValue;
+
+        var target = BuildMoveTargets().FirstOrDefault(option => option.Value == targetValue);
+        if (target is null)
+        {
+            return;
+        }
+
+        ApiState.MoveRequest(ApiState.SelectedRequestId, target.CollectionId, target.FolderId);
+        _selectedMoveTarget = string.Empty;
+    }
+
+    private IEnumerable<MoveTargetOption> BuildMoveTargets()
+    {
+        foreach (var collection in ApiState.Collections)
+        {
+            yield return new MoveTargetOption(collection.Id, null, collection.Name);
+
+            foreach (var folder in collection.Folders)
+            {
+                foreach (var target in BuildFolderTargets(collection.Id, folder, collection.Name))
+                {
+                    yield return target;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<MoveTargetOption> BuildFolderTargets(string collectionId, RequestFolder folder, string prefix)
+    {
+        var label = $"{prefix} / {folder.Name}";
+        yield return new MoveTargetOption(collectionId, folder.Id, label);
+
+        foreach (var subFolder in folder.SubFolders)
+        {
+            foreach (var target in BuildFolderTargets(collectionId, subFolder, label))
+            {
+                yield return target;
+            }
+        }
+    }
+
+    private sealed record MoveTargetOption(string CollectionId, string? FolderId, string Label)
+    {
+        public string Value => string.IsNullOrWhiteSpace(FolderId)
+            ? CollectionId
+            : $"{CollectionId}|{FolderId}";
+    }
 }

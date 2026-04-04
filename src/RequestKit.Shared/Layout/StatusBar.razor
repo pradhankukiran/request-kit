@@ -4,9 +4,11 @@
 <footer class="rk-statusbar" role="status">
     <div class="rk-statusbar-left">
         <span class="rk-status-dot"></span>
-        <span>Ready</span>
+        <span>@WorkspaceStateLabel</span>
     </div>
     <div class="rk-statusbar-center">
+        <span>@ApiState.CurrentWorkspaceName</span>
+        <span class="rk-sep">|</span>
         <span>@ApiState.Requests.Count requests</span>
         <span class="rk-sep">|</span>
         <span>@ApiState.History.Count history</span>
@@ -17,6 +19,23 @@
 </footer>
 
 @code {
+    private string WorkspaceStateLabel => ApiState.IsWorkspaceSaving
+        ? "Saving workspace..."
+        : ApiState.IsWorkspaceDirty
+            ? "Unsaved changes"
+            : ApiState.LastSavedAt is null
+                ? "Ready"
+                : $"Saved {FormatTimestamp(ApiState.LastSavedAt.Value)}";
+
+    private static string FormatTimestamp(DateTime timestamp)
+    {
+        var diff = DateTime.UtcNow - timestamp;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{diff.TotalMinutes:F0}m ago";
+        if (diff.TotalHours < 24) return $"{diff.TotalHours:F0}h ago";
+        return timestamp.ToString("MMM d, HH:mm");
+    }
+
     protected override void OnInitialized() => ApiState.OnChange += StateHasChanged;
     public void Dispose() => ApiState.OnChange -= StateHasChanged;
 }

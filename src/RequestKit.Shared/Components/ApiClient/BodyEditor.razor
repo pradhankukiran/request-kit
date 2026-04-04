@@ -8,16 +8,19 @@
                 @onclick="() => SetType(BodyType.RawXml)">XML</button>
         <button class="rk-tab @(Body.Type == BodyType.RawText ? "active" : "")"
                 @onclick="() => SetType(BodyType.RawText)">Text</button>
-        <button class="rk-tab @(Body.Type == BodyType.FormData ? "active" : "")"
-                @onclick="() => SetType(BodyType.FormData)">Form</button>
+        <button class="rk-tab @(Body.Type == BodyType.FormUrlEncoded ? "active" : "")"
+                @onclick="() => SetType(BodyType.FormUrlEncoded)">Form URL Encoded</button>
     </div>
 
     @if (Body.Type == BodyType.None)
     {
         <div class="rk-empty-state">This request has no body.</div>
     }
-    else if (Body.Type == BodyType.FormData)
+    else if (Body.Type == BodyType.FormUrlEncoded)
     {
+        <div class="rk-settings-note" style="margin: 10px 0 12px;">
+            Sends the body as <code>application/x-www-form-urlencoded</code>.
+        </div>
         <KeyValueEditor Entries="@Body.FormData" OnChanged="UpdateFormData" Placeholder="field" />
     }
     else

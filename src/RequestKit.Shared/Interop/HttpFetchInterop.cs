@@ -14,10 +14,25 @@ public class HttpFetchInterop : IAsyncDisposable
             "import", "./_content/RequestKit.Shared/js/fetchInterop.js").AsTask());
     }
 
-    public async Task<FetchResult> SendAsync(string method, string url, Dictionary<string, string> headers, string? body, int timeoutMs = 30000)
+    public async Task<FetchResult> SendAsync(
+        string requestId,
+        string method,
+        string url,
+        Dictionary<string, string> headers,
+        string? body,
+        int timeoutMs = 30000,
+        bool followRedirects = true)
     {
         var module = await _moduleTask.Value;
-        var json = await module.InvokeAsync<JsonElement>("sendRequest", method, url, headers, body, timeoutMs);
+        var json = await module.InvokeAsync<JsonElement>(
+            "sendRequest",
+            requestId,
+            method,
+            url,
+            headers,
+            body,
+            timeoutMs,
+            followRedirects);
 
         var success = json.GetProperty("success").GetBoolean();
         var responseHeaders = new List<KeyValueEntry>();
@@ -38,8 +53,15 @@ public class HttpFetchInterop : IAsyncDisposable
             Body = json.GetProperty("body").GetString() ?? "",
             ResponseTimeMs = json.GetProperty("responseTimeMs").GetDouble(),
             ResponseSizeBytes = json.GetProperty("responseSizeBytes").GetInt64(),
-            ErrorMessage = json.TryGetProperty("errorMessage", out var err) && err.ValueKind != JsonValueKind.Null ? err.GetString() : null
+            ErrorMessage = json.TryGetProperty("errorMessage", out var err) && err.ValueKind != JsonValueKind.Null ? err.GetString() : null,
+            WasCancelled = json.TryGetProperty("wasCancelled", out var cancelled) && cancelled.GetBoolean()
         };
+    }
+
+    public async Task CancelRequestAsync(string requestId)
+    {
+        var module = await _moduleTask.Value;
+        await module.InvokeVoidAsync("cancelRequest", requestId);
     }
 
     public async ValueTask DisposeAsync()
@@ -62,4 +84,5 @@ public record FetchResult
     public double ResponseTimeMs { get; init; }
     public long ResponseSizeBytes { get; init; }
     public string? ErrorMessage { get; init; }
+    public bool WasCancelled { get; init; }
 }
