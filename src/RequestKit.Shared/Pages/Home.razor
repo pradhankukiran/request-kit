@@ -5,64 +5,175 @@
 @inject AppState App
 @inject NavigationManager Nav
 
-<div class="rk-home">
-    <div class="rk-home-header">
-        <h1 class="rk-home-title">RequestKit</h1>
-        <p class="rk-home-subtitle">Your all-in-one developer toolkit for API testing, regex building, and text diffing.</p>
-    </div>
+<div class="rk-home rk-route-focus" tabindex="-1">
+    <section class="rk-home-hero">
+        <div class="rk-home-hero-copy">
+            <div class="rk-home-kicker">Local-first developer workbench</div>
+            <h1 class="rk-home-title">RequestKit</h1>
+            <p class="rk-home-subtitle">
+                Build requests, inspect responses, test regexes, and diff payloads without leaving the browser.
+            </p>
 
-    <div class="rk-home-features">
-        <div class="rk-feature-card">
-            <div class="rk-feature-info">
-                <div class="rk-feature-name">API Client</div>
-                <div class="rk-feature-desc">Send HTTP requests, inspect responses, manage collections and environments.</div>
+            <div class="rk-home-hero-actions">
+                <button class="rk-btn rk-btn-primary rk-btn-lg" @onclick="CreateWorkspaceAsync">New Workspace</button>
+                @if (LatestWorkspace is not null)
+                {
+                    <button class="rk-btn rk-btn-lg" @onclick="() => OpenWorkspace(LatestWorkspace.Id)">Resume Latest</button>
+                }
+            </div>
+
+            <div class="rk-home-hero-meta">
+                <div class="rk-home-meta-pill">@_workspaces.Count workspace@(_workspaces.Count == 1 ? string.Empty : "s")</div>
+                <div class="rk-home-meta-pill">Browser-only</div>
+                <div class="rk-home-meta-pill">Autosaved locally</div>
             </div>
         </div>
-        <div class="rk-feature-card">
-            <div class="rk-feature-info">
-                <div class="rk-feature-name">Regex Builder</div>
-                <div class="rk-feature-desc">Build, test, and understand regular expressions with live highlighting.</div>
+
+        <div class="rk-home-hero-panel">
+            <div class="rk-home-hero-panel-header">
+                <span class="rk-home-panel-label">Toolchain</span>
+                <span class="rk-home-panel-caption">One flow, three focused tools</span>
+            </div>
+
+            <div class="rk-home-flow-list">
+                <div class="rk-home-flow-step rk-home-flow-step-api">
+                    <div class="rk-home-flow-step-head">
+                        <span class="rk-home-flow-badge">01</span>
+                        <span class="rk-home-flow-title">API Client</span>
+                    </div>
+                    <p>Build requests, manage environments, and capture responses with history.</p>
+                </div>
+
+                <div class="rk-home-flow-step rk-home-flow-step-regex">
+                    <div class="rk-home-flow-step-head">
+                        <span class="rk-home-flow-badge">02</span>
+                        <span class="rk-home-flow-title">Regex Builder</span>
+                    </div>
+                    <p>Push response bodies into pattern testing without re-copying data around.</p>
+                </div>
+
+                <div class="rk-home-flow-step rk-home-flow-step-diff">
+                    <div class="rk-home-flow-step-head">
+                        <span class="rk-home-flow-badge">03</span>
+                        <span class="rk-home-flow-title">Diff Viewer</span>
+                    </div>
+                    <p>Compare payload revisions side by side when contracts or fixtures change.</p>
+                </div>
             </div>
         </div>
-        <div class="rk-feature-card">
-            <div class="rk-feature-info">
-                <div class="rk-feature-name">Diff Viewer</div>
-                <div class="rk-feature-desc">Compare text side-by-side or unified, with inline change highlighting.</div>
+    </section>
+
+    @if (!string.IsNullOrEmpty(_loadError))
+    {
+        <div role="alert" class="rk-error-banner">@_loadError</div>
+    }
+
+    <section class="rk-home-shell">
+        <div class="rk-home-workspaces">
+            <div class="rk-home-section-head">
+                <div>
+                    <div class="rk-section-header">Recent Workspaces</div>
+                    <div class="rk-home-section-copy">Pick up where you left off or start a fresh scratchpad.</div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div class="rk-home-content">
-        <button class="rk-btn rk-btn-primary rk-btn-lg rk-home-cta" @onclick="CreateWorkspaceAsync">+ New Workspace</button>
-
-        @if (!string.IsNullOrEmpty(_loadError))
-        {
-            <div role="alert" class="rk-error-banner">@_loadError</div>
-        }
-
-        @if (_workspaces.Count > 0)
-        {
-            <div class="rk-section-header">Recent Workspaces</div>
-            @foreach (var ws in _workspaces)
+            @if (_workspaces.Count == 0)
             {
-                <div class="rk-workspace-card" @key="ws.Id" @onclick="() => OpenWorkspace(ws.Id)">
-                    <div class="rk-workspace-name">@ws.Name</div>
-                    <div class="rk-workspace-meta">@ws.RequestCount requests &middot; @ws.CollectionCount collections &middot; @ws.ModifiedAt.ToString("MMM d, yyyy")</div>
+                <div class="rk-home-empty-panel">
+                    <div class="rk-home-empty-title">No saved workspaces yet</div>
+                    <div class="rk-home-empty-copy">Create one workspace and RequestKit will keep your collections, history, and environments in local storage.</div>
                 </div>
             }
-        }
-    </div>
+            else
+            {
+                <div class="rk-home-workspace-list">
+                    @foreach (var workspace in _workspaces)
+                    {
+                        <button type="button" class="rk-workspace-card" @key="workspace.Id" @onclick="() => OpenWorkspace(workspace.Id)">
+                            <div class="rk-workspace-card-inner">
+                                <div class="rk-workspace-icon">
+                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M2.5 4.5h4l1.2 1.5h7.8v7.5H2.5z" />
+                                        <path d="M2.5 6h13" />
+                                    </svg>
+                                </div>
+                                <div class="rk-feature-info">
+                                    <div class="rk-workspace-name">@workspace.Name</div>
+                                    <div class="rk-workspace-meta">@workspace.RequestCount requests &middot; @workspace.CollectionCount collections</div>
+                                </div>
+                                <div class="rk-home-workspace-date">@FormatWorkspaceDate(workspace.ModifiedAt)</div>
+                            </div>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="rk-home-features-panel">
+            <div class="rk-home-section-head">
+                <div>
+                    <div class="rk-section-header">Included Tools</div>
+                    <div class="rk-home-section-copy">Purpose-built utilities that share context instead of living as isolated pages.</div>
+                </div>
+            </div>
+
+            <div class="rk-home-features">
+                <div class="rk-feature-card">
+                    <div class="rk-feature-icon rk-feature-icon-api">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 6h12M4 10h12M4 14h7" />
+                            <circle cx="14.5" cy="14.5" r="1.5" fill="currentColor" stroke="none" />
+                        </svg>
+                    </div>
+                    <div class="rk-feature-info">
+                        <div class="rk-feature-name">API Client</div>
+                        <div class="rk-feature-desc">Requests, environments, history, cURL import/export, and direct response handoff into the other tools.</div>
+                    </div>
+                </div>
+
+                <div class="rk-feature-card">
+                    <div class="rk-feature-icon rk-feature-icon-regex">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M4 5.5h12M7 9.5h6M5.5 13.5h9" />
+                            <path d="M6 4v11M14 4v11" opacity="0.45" />
+                        </svg>
+                    </div>
+                    <div class="rk-feature-info">
+                        <div class="rk-feature-name">Regex Builder</div>
+                        <div class="rk-feature-desc">Live matches, flags, explanations, and a pattern library for common parsing jobs.</div>
+                    </div>
+                </div>
+
+                <div class="rk-feature-card">
+                    <div class="rk-feature-icon rk-feature-icon-diff">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M6 4v12M14 4v12M4 6h4M12 14h4" />
+                        </svg>
+                    </div>
+                    <div class="rk-feature-info">
+                        <div class="rk-feature-name">Diff Viewer</div>
+                        <div class="rk-feature-desc">Payload comparison for regressions, fixture drift, and before/after response snapshots.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 </div>
 
 @code {
     private List<WorkspaceSummary> _workspaces = [];
     private string? _loadError;
 
+    private WorkspaceSummary? LatestWorkspace => _workspaces.FirstOrDefault();
+
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _workspaces = (await Storage.ListWorkspacesAsync()).ToList();
+            _workspaces = (await Storage.ListWorkspacesAsync())
+                .OrderByDescending(workspace => workspace.ModifiedAt)
+                .ThenBy(workspace => workspace.Name)
+                .ToList();
         }
         catch (Exception ex)
         {
@@ -105,8 +216,8 @@
     {
         try
         {
-            var ws = await Storage.LoadWorkspaceAsync(id);
-            ApiState.LoadWorkspace(ws);
+            var workspace = await Storage.LoadWorkspaceAsync(id);
+            ApiState.LoadWorkspace(workspace);
             App.SetMode(ToolMode.ApiClient);
             Nav.NavigateTo("/workbench");
         }
@@ -115,5 +226,23 @@
             Console.Error.WriteLine($"Failed to open workspace {id}: {ex.Message}");
             _loadError = "Failed to open workspace. It may have been deleted or storage is unavailable.";
         }
+    }
+
+    private static string FormatWorkspaceDate(DateTime modifiedAt)
+    {
+        var age = DateTime.UtcNow - modifiedAt;
+        if (age.TotalHours < 24)
+        {
+            return age.TotalMinutes < 60
+                ? $"{Math.Max(1, (int)Math.Round(age.TotalMinutes))}m ago"
+                : $"{Math.Max(1, (int)Math.Round(age.TotalHours))}h ago";
+        }
+
+        if (age.TotalDays < 7)
+        {
+            return $"{Math.Max(1, (int)Math.Round(age.TotalDays))}d ago";
+        }
+
+        return modifiedAt.ToString("MMM d");
     }
 }

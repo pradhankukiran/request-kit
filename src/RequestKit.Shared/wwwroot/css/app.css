@@ -43,6 +43,8 @@ body {
 }
 ::selection { background: var(--rk-primary); color: var(--rk-white); }
 :focus-visible { outline: 2px solid var(--rk-primary); outline-offset: 1px; }
+.rk-route-focus:focus,
+.rk-route-focus:focus-visible { outline: none; }
 
 /* --- App Shell --- */
 .rk-app { display: flex; flex-direction: column; height: 100vh; }
@@ -262,21 +264,209 @@ body {
 
 /* --- Home Page --- */
 .rk-home {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    max-width: 720px; margin: 0 auto; padding: 80px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 32px 72px;
 }
-.rk-home-header { text-align: center; margin-bottom: 40px; }
-.rk-home-title { font-size: 36px; font-weight: 800; color: var(--rk-text); letter-spacing: -0.5px; }
-.rk-home-subtitle { font-size: 16px; color: var(--rk-text-secondary); margin-top: 6px; }
-.rk-home-content { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.rk-home-title {
+    font-size: clamp(40px, 6vw, 68px);
+    line-height: 0.96;
+    font-weight: 900;
+    color: var(--rk-text);
+    letter-spacing: -0.06em;
+}
+.rk-home-subtitle {
+    max-width: 56ch;
+    font-size: 17px;
+    color: var(--rk-text-secondary);
+    margin-top: 14px;
+    line-height: 1.7;
+}
+.rk-home-kicker {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #1d4ed8;
+}
+.rk-home-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+    gap: 20px;
+    align-items: stretch;
+}
+.rk-home-hero-copy,
+.rk-home-hero-panel {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    box-shadow: var(--rk-shadow-sm);
+}
+.rk-home-hero-copy {
+    padding: 30px 32px 34px;
+    background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.14), transparent 34%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+.rk-home-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+.rk-home-hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+.rk-home-meta-pill {
+    padding: 7px 10px;
+    border: 1px solid var(--rk-border);
+    background: rgba(255, 255, 255, 0.92);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rk-text-secondary);
+}
+.rk-home-hero-panel {
+    padding: 20px;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+.rk-home-hero-panel-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.rk-home-panel-label {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--rk-text);
+}
+.rk-home-panel-caption {
+    font-size: 12px;
+    color: var(--rk-text-muted);
+}
+.rk-home-flow-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.rk-home-flow-step {
+    padding: 16px;
+    border: 1px solid var(--rk-border);
+    background: var(--rk-white);
+}
+.rk-home-flow-step-api { border-left: 4px solid #2563eb; }
+.rk-home-flow-step-regex { border-left: 4px solid #7c3aed; }
+.rk-home-flow-step-diff { border-left: 4px solid #d97706; }
+.rk-home-flow-step-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.rk-home-flow-badge {
+    min-width: 30px;
+    padding: 3px 6px;
+    background: var(--rk-surface);
+    border: 1px solid var(--rk-border);
+    font-family: var(--rk-font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--rk-text-secondary);
+    text-align: center;
+}
+.rk-home-flow-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--rk-text);
+}
+.rk-home-flow-step p {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--rk-text-secondary);
+}
+.rk-home-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+    gap: 20px;
+    align-items: start;
+}
+.rk-home-workspaces,
+.rk-home-features-panel {
+    border: 1px solid var(--rk-border);
+    background: var(--rk-white);
+    box-shadow: var(--rk-shadow-sm);
+    min-width: 0;
+}
+.rk-home-workspaces {
+    padding: 20px;
+}
+.rk-home-features-panel {
+    padding: 20px;
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+}
+.rk-home-section-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.rk-home-section-copy {
+    margin-top: 4px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--rk-text-secondary);
+}
+.rk-home-empty-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    border: 1px dashed var(--rk-border);
+    background: linear-gradient(180deg, #fbfdff 0%, #f8fafc 100%);
+}
+.rk-home-empty-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--rk-text);
+}
+.rk-home-empty-copy {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--rk-text-secondary);
+}
+.rk-home-workspace-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
 .rk-section-header {
     font-size: 12px; font-weight: 600; color: var(--rk-text-muted);
     text-transform: uppercase; letter-spacing: 0.5px; padding: 16px 0 4px;
 }
 .rk-workspace-card {
-    padding: 20px; border: 1px solid var(--rk-border); border-radius: var(--rk-radius-lg);
+    width: 100%;
+    padding: 0;
+    border: 1px solid var(--rk-border); border-radius: var(--rk-radius-lg);
     background: var(--rk-white); cursor: pointer; transition: all 0.15s ease;
     box-shadow: var(--rk-shadow-sm);
+    text-align: left;
+    font-family: inherit;
 }
 .rk-workspace-card:hover { border-color: var(--rk-primary); box-shadow: var(--rk-shadow-md); transform: translateY(-1px); }
 .rk-workspace-name { font-size: 15px; font-weight: 600; color: var(--rk-text); }
@@ -285,10 +475,9 @@ body {
 .rk-home-logo-large svg { filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.3)); }
 .rk-home-features {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
+    grid-template-columns: 1fr;
+    gap: 14px;
     width: 100%;
-    margin-bottom: 32px;
 }
 .rk-feature-card {
     display: flex;
@@ -320,11 +509,11 @@ body {
 .rk-feature-info { flex: 1; min-width: 0; }
 .rk-feature-name { font-size: 15px; font-weight: 700; color: var(--rk-text); margin-bottom: 4px; }
 .rk-feature-desc { font-size: 13px; color: var(--rk-text-secondary); line-height: 1.5; }
-.rk-home-cta { width: 100%; justify-content: center; font-size: 15px; padding: 14px 24px; }
 .rk-workspace-card-inner {
     display: flex;
     align-items: center;
     gap: 14px;
+    padding: 18px 20px;
 }
 .rk-workspace-icon {
     width: 40px;
@@ -338,6 +527,14 @@ body {
     flex-shrink: 0;
 }
 .rk-workspace-card:hover .rk-workspace-icon { color: var(--rk-primary); background: var(--rk-primary-light); }
+.rk-home-workspace-date {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--rk-text-muted);
+    font-variant-numeric: tabular-nums;
+}
 
 /* --- Modals --- */
 .rk-modal-overlay {
@@ -1745,8 +1942,15 @@ mark.rk-regex-hl {
     .rk-api-onboarding-grid {
         grid-template-columns: 1fr;
     }
+    .rk-home-hero,
+    .rk-home-shell {
+        grid-template-columns: 1fr;
+    }
     .rk-home-features {
         grid-template-columns: 1fr;
+    }
+    .rk-home-workspace-date {
+        margin-left: 0;
     }
 }
 
@@ -1765,10 +1969,29 @@ mark.rk-regex-hl {
     .rk-home {
         padding: 24px 16px;
     }
+    .rk-home-hero-copy,
+    .rk-home-hero-panel,
+    .rk-home-workspaces,
+    .rk-home-features-panel {
+        padding: 16px;
+    }
+    .rk-home-hero-copy {
+        padding: 22px 18px 24px;
+    }
+    .rk-home-title {
+        font-size: 34px;
+    }
+    .rk-home-hero-actions {
+        flex-direction: column;
+    }
     .rk-home-features {
         gap: 10px;
     }
     .rk-feature-card {
+        padding: 14px;
+    }
+    .rk-workspace-card-inner {
+        flex-wrap: wrap;
         padding: 14px;
     }
 }

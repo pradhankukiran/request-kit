@@ -2,7 +2,7 @@
 @inject AppState App
 @implements IDisposable
 
-<div class="rk-workbench">
+<div class="rk-workbench rk-route-focus" tabindex="-1">
     @switch (App.ActiveMode)
     {
         case ToolMode.ApiClient:

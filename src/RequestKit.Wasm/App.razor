@@ -6,7 +6,7 @@
                 AdditionalAssemblies="new[] { typeof(App).Assembly }">
             <Found Context="routeData">
                 <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
-                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                <FocusOnNavigate RouteData="@routeData" Selector=".rk-route-focus" />
             </Found>
         </Router>
     </ChildContent>
