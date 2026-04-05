@@ -3,5 +3,6 @@
     <Project Path="src/RequestKit.Core/RequestKit.Core.csproj" />
     <Project Path="src/RequestKit.Shared/RequestKit.Shared.csproj" />
     <Project Path="src/RequestKit.Wasm/RequestKit.Wasm.csproj" />
+    <Project Path="src/RequestKit.Maui/RequestKit.Maui.csproj" />
   </Folder>
 </Solution>
